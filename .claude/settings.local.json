@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/pemprovkaltim2025/Documents/**)",
+      "Bash(npm install *)",
+      "Bash(npx shadcn@latest init --defaults -y)",
+      "Bash(npx shadcn@latest add card input label select badge dialog alert-dialog form dropdown-menu sheet tabs avatar progress separator skeleton table toast -y)",
+      "Bash(npx shadcn@latest add card input label select badge dialog alert-dialog form dropdown-menu sheet tabs avatar progress separator skeleton table sonner -y)",
+      "Bash(npx shadcn@latest add checkbox textarea popover calendar -y)",
+      "Bash(mkdir -p \"/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/types\" \"/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/data\" \"/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/contexts\" \"/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/components/layout\" \"/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/pages/admin\")",
+      "Bash(mkdir -p \"/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/pages\")"
+    ],
+    "additionalDirectories": [
+      "/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src",
+      "/Users/pemprovkaltim2025/Documents/[02] Pemprov Kaltim/App/pokja/pokja/src/pages"
+    ]
+  }
+}
