@@ -8,7 +8,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/contexts/AuthContext'
-import { mockPokja } from '@/data/mockData'
+import { useData } from '@/contexts/DataContext'
+import { updateProfile } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -19,6 +21,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ProfilPage() {
   const { user } = useAuth()
+  const { pokja: pokjaList } = useData()
   const [name, setName] = useState(user?.full_name ?? '')
   const [currentPass, setCurrentPass] = useState('')
   const [newPass, setNewPass] = useState('')
@@ -30,15 +33,20 @@ export default function ProfilPage() {
   if (!user) return null
 
   const initials = user.full_name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-  const pokja = user.pokja_id ? mockPokja.find(p => p.id === user.pokja_id) : null
+  const pokja = user.pokja_id ? pokjaList.find(p => p.id === user.pokja_id) : null
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) { toast.error('Nama tidak boleh kosong.'); return }
     setIsSavingName(true)
-    await new Promise(r => setTimeout(r, 600))
-    toast.success('Nama berhasil diperbarui.')
-    setIsSavingName(false)
+    try {
+      await updateProfile(user.id, { full_name: name.trim() })
+      toast.success('Nama berhasil diperbarui.')
+    } catch {
+      toast.error('Gagal memperbarui nama.')
+    } finally {
+      setIsSavingName(false)
+    }
   }
 
   async function handleSavePassword(e: React.FormEvent) {
@@ -47,12 +55,18 @@ export default function ProfilPage() {
     if (newPass !== confirmPass) { toast.error('Konfirmasi password tidak cocok.'); return }
     if (newPass.length < 6) { toast.error('Password baru minimal 6 karakter.'); return }
     setIsSavingPass(true)
-    await new Promise(r => setTimeout(r, 600))
-    toast.success('Password berhasil diubah.')
-    setIsSavingPass(false)
-    setCurrentPass('')
-    setNewPass('')
-    setConfirmPass('')
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPass })
+      if (error) throw error
+      toast.success('Password berhasil diubah.')
+      setCurrentPass('')
+      setNewPass('')
+      setConfirmPass('')
+    } catch {
+      toast.error('Gagal mengubah password. Pastikan password saat ini benar.')
+    } finally {
+      setIsSavingPass(false)
+    }
   }
 
   return (
@@ -62,7 +76,6 @@ export default function ProfilPage() {
         <p className="text-sm text-gray-500 mt-1">Kelola informasi akun Anda</p>
       </div>
 
-      {/* Profile card */}
       <Card className="border-[#d1e8d5]">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
@@ -81,7 +94,6 @@ export default function ProfilPage() {
         </CardContent>
       </Card>
 
-      {/* Ubah nama */}
       <Card className="border-[#d1e8d5]">
         <CardHeader className="pb-3">
           <CardTitle className="text-base text-[#1B6B35]">Informasi Dasar</CardTitle>
@@ -104,7 +116,6 @@ export default function ProfilPage() {
         </CardContent>
       </Card>
 
-      {/* Ubah password */}
       <Card className="border-[#d1e8d5]">
         <CardHeader className="pb-3">
           <CardTitle className="text-base text-[#1B6B35]">Ubah Password</CardTitle>
@@ -114,13 +125,7 @@ export default function ProfilPage() {
             <div className="space-y-1.5">
               <Label>Password Saat Ini</Label>
               <div className="relative">
-                <Input
-                  type={showPass ? 'text' : 'password'}
-                  value={currentPass}
-                  onChange={e => setCurrentPass(e.target.value)}
-                  className="border-[#d1e8d5] pr-10"
-                  placeholder="••••••••"
-                />
+                <Input type={showPass ? 'text' : 'password'} value={currentPass} onChange={e => setCurrentPass(e.target.value)} className="border-[#d1e8d5] pr-10" placeholder="••••••••" />
                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

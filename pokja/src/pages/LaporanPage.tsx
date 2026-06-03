@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { FileSpreadsheet, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -7,10 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
-import { mockKegiatan, mockPokja, mockProgramPokok, mockRealisasi, BULAN_FULL, SCHED_KEYS } from '@/data/mockData'
+import { useData } from '@/contexts/DataContext'
+import { fetchKegiatan, fetchRealisasi } from '@/lib/db'
+import type { Kegiatan, RealisasiKegiatan } from '@/types'
+import { BULAN_FULL, SCHED_KEYS } from '@/data/mockData'
 import { toast } from 'sonner'
-
-const CURRENT_YEAR = 2026
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'terlaksana') return <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">✓ Terlaksana</Badge>
@@ -21,45 +22,53 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function LaporanPage() {
   const { user } = useAuth()
-  const [filterTahun, setFilterTahun] = useState('2026')
+  const { pokja: pokjaList, programPokok } = useData()
+  const [filterTahun, setFilterTahun] = useState(String(new Date().getFullYear()))
   const [filterPokja, setFilterPokja] = useState<string>(
     user?.role === 'operator' && user.pokja_id ? String(user.pokja_id) : 'all'
   )
   const [filterBulan, setFilterBulan] = useState('all')
+  const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
+  const [allRealisasi, setAllRealisasi] = useState<RealisasiKegiatan[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const pokjaList = user?.role === 'operator' && user.pokja_id
-    ? mockPokja.filter(p => p.id === user.pokja_id)
-    : mockPokja
+  useEffect(() => {
+    const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
+    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun: parseInt(filterTahun) })])
+      .then(([k, r]) => { setAllKegiatan(k); setAllRealisasi(r) })
+      .finally(() => setIsLoading(false))
+  }, [user, filterTahun])
+
+  const pokjaListFiltered = user?.role === 'operator' && user.pokja_id
+    ? pokjaList.filter(p => p.id === user.pokja_id)
+    : pokjaList
 
   const kegiatan = useMemo(() => {
-    return mockKegiatan.filter(k => {
-      if (user?.role === 'operator' && user.pokja_id && k.pokja_id !== user.pokja_id) return false
+    return allKegiatan.filter(k => {
       if (filterPokja !== 'all' && k.pokja_id !== parseInt(filterPokja)) return false
       if (k.tahun !== parseInt(filterTahun)) return false
       return true
     })
-  }, [filterTahun, filterPokja, user])
+  }, [allKegiatan, filterTahun, filterPokja])
 
   const pokjaProgress = useMemo(() => {
     const relevantPokja = filterPokja !== 'all'
-      ? mockPokja.filter(p => p.id === parseInt(filterPokja))
-      : (user?.role === 'operator' && user.pokja_id ? mockPokja.filter(p => p.id === user.pokja_id) : mockPokja)
+      ? pokjaList.filter(p => p.id === parseInt(filterPokja))
+      : pokjaListFiltered
 
     return relevantPokja.map(pokja => {
       const keg = kegiatan.filter(k => k.pokja_id === pokja.id)
       let totalSched = 0, totalReal = 0
-
       keg.forEach(k => {
         SCHED_KEYS.forEach((key, idx) => {
           if (k[key]) {
             totalSched++
-            const r = mockRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === parseInt(filterTahun))
+            const r = allRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1)
             if (r && r.status === 'terlaksana') totalReal++
           }
         })
       })
-
-      const programs = mockProgramPokok.filter(p => p.pokja_id === pokja.id)
+      const programs = programPokok.filter(p => p.pokja_id === pokja.id)
       const programData = programs.map(prog => {
         const progKeg = keg.filter(k => k.program_pokok_id === prog.id)
         let pSched = 0, pReal = 0
@@ -67,43 +76,39 @@ export default function LaporanPage() {
           SCHED_KEYS.forEach((key, idx) => {
             if (k[key]) {
               pSched++
-              const r = mockRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === parseInt(filterTahun))
+              const r = allRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1)
               if (r && r.status === 'terlaksana') pReal++
             }
           })
         })
         return { name: prog.name, kegiatan: progKeg.length, terlaksana: pReal, total: pSched }
       })
-
-      return {
-        pokja,
-        kegiatan: keg.length,
-        terlaksana: totalReal,
-        total: totalSched,
-        pct: totalSched > 0 ? Math.round((totalReal / totalSched) * 100) : 0,
-        programs: programData,
-      }
+      return { pokja, kegiatan: keg.length, terlaksana: totalReal, total: totalSched, pct: totalSched > 0 ? Math.round((totalReal / totalSched) * 100) : 0, programs: programData }
     })
-  }, [kegiatan, filterTahun, filterPokja, user])
+  }, [kegiatan, allRealisasi, filterPokja, pokjaList, pokjaListFiltered, programPokok])
 
   const laporanBulanan = useMemo(() => {
     const months = filterBulan === 'all' ? Array.from({ length: 12 }, (_, i) => i + 1) : [parseInt(filterBulan)]
-
     return months.map(bulan => {
       const scheduled = kegiatan.filter(k => k[SCHED_KEYS[bulan - 1]])
       const withRealisasi = scheduled.map(k => {
-        const r = mockRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === bulan && r2.tahun === parseInt(filterTahun))
-        const pokjaName = mockPokja.find(p => p.id === k.pokja_id)?.name ?? '-'
-        const progName = mockProgramPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-'
-        return { ...k, realisasi: r, pokjaName, progName }
+        const r = allRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === bulan)
+        return {
+          ...k,
+          realisasi: r,
+          pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
+          progName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
+        }
       })
       return { bulan, label: BULAN_FULL[bulan - 1], items: withRealisasi }
     }).filter(m => m.items.length > 0)
-  }, [kegiatan, filterTahun, filterBulan])
+  }, [kegiatan, allRealisasi, filterBulan, pokjaList, programPokok])
 
   function handleExport(type: 'pdf' | 'excel') {
-    toast.success(`Laporan sedang disiapkan dalam format ${type.toUpperCase()}. Fitur ini akan aktif saat terhubung ke database.`)
+    toast.success(`Laporan sedang disiapkan dalam format ${type.toUpperCase()}.`)
   }
+
+  if (isLoading) return <div className="py-20 text-center text-gray-400">Memuat data laporan...</div>
 
   return (
     <div className="space-y-5">
@@ -124,9 +129,7 @@ export default function LaporanPage() {
 
       <div className="flex flex-wrap gap-3">
         <Select value={filterTahun} onValueChange={v => v && setFilterTahun(v)}>
-          <SelectTrigger className="w-28 border-[#d1e8d5]">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="w-28 border-[#d1e8d5]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="2026">2026</SelectItem>
             <SelectItem value="2025">2025</SelectItem>
@@ -134,14 +137,10 @@ export default function LaporanPage() {
         </Select>
         {user?.role !== 'operator' && (
           <Select value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
-            <SelectTrigger className="w-40 border-[#d1e8d5]">
-              <SelectValue placeholder="Filter Pokja" />
-            </SelectTrigger>
+            <SelectTrigger className="w-40 border-[#d1e8d5]"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Pokja</SelectItem>
-              {pokjaList.map(p => (
-                <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-              ))}
+              {pokjaListFiltered.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -149,12 +148,8 @@ export default function LaporanPage() {
 
       <Tabs defaultValue="pokja">
         <TabsList className="bg-[#EAF5EC]">
-          <TabsTrigger value="pokja" className="data-[state=active]:bg-[#1B6B35] data-[state=active]:text-white">
-            Progres per Pokja
-          </TabsTrigger>
-          <TabsTrigger value="bulanan" className="data-[state=active]:bg-[#1B6B35] data-[state=active]:text-white">
-            Laporan Bulanan
-          </TabsTrigger>
+          <TabsTrigger value="pokja" className="data-[state=active]:bg-[#1B6B35] data-[state=active]:text-white">Progres per Pokja</TabsTrigger>
+          <TabsTrigger value="bulanan" className="data-[state=active]:bg-[#1B6B35] data-[state=active]:text-white">Laporan Bulanan</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pokja" className="mt-4 space-y-4">
@@ -191,9 +186,7 @@ export default function LaporanPage() {
                         <td className="py-2 text-center text-gray-600">{prog.kegiatan}</td>
                         <td className="py-2 text-center text-green-600 font-medium">{prog.terlaksana}</td>
                         <td className="py-2 text-center text-gray-500">{prog.total}</td>
-                        <td className="py-2 text-right font-medium text-[#1B6B35]">
-                          {prog.total > 0 ? Math.round((prog.terlaksana / prog.total) * 100) : 0}%
-                        </td>
+                        <td className="py-2 text-right font-medium text-[#1B6B35]">{prog.total > 0 ? Math.round((prog.terlaksana / prog.total) * 100) : 0}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -213,19 +206,13 @@ export default function LaporanPage() {
         </TabsContent>
 
         <TabsContent value="bulanan" className="mt-4 space-y-4">
-          <div>
-            <Select value={filterBulan} onValueChange={v => v && setFilterBulan(v)}>
-              <SelectTrigger className="w-44 border-[#d1e8d5]">
-                <SelectValue placeholder="Pilih Bulan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Bulan</SelectItem>
-                {BULAN_FULL.map((b, i) => (
-                  <SelectItem key={i + 1} value={String(i + 1)}>{b}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={filterBulan} onValueChange={v => v && setFilterBulan(v)}>
+            <SelectTrigger className="w-44 border-[#d1e8d5]"><SelectValue placeholder="Pilih Bulan" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Bulan</SelectItem>
+              {BULAN_FULL.map((b, i) => <SelectItem key={i + 1} value={String(i + 1)}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
 
           {laporanBulanan.map(({ bulan, label, items }) => (
             <Card key={bulan} className="border-[#d1e8d5]">
@@ -250,21 +237,14 @@ export default function LaporanPage() {
                     <tbody>
                       {items.map((item, idx) => (
                         <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#EAF5EC]/20'}>
-                          <td className="px-4 py-2.5 text-gray-800 max-w-xs">
-                            <p className="line-clamp-1">{item.nama_kegiatan}</p>
-                          </td>
+                          <td className="px-4 py-2.5 text-gray-800 max-w-xs"><p className="line-clamp-1">{item.nama_kegiatan}</p></td>
                           <td className="px-4 py-2.5 hidden md:table-cell">
                             <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{item.pokjaName}</Badge>
                           </td>
                           <td className="px-4 py-2.5 text-gray-500 text-xs hidden lg:table-cell">{item.progName}</td>
-                          <td className="px-4 py-2.5 text-center">
-                            <StatusBadge status={item.realisasi?.status ?? 'menunggu'} />
-                          </td>
+                          <td className="px-4 py-2.5 text-center"><StatusBadge status={item.realisasi?.status ?? 'menunggu'} /></td>
                           <td className="px-4 py-2.5 text-xs text-gray-500 hidden lg:table-cell">
-                            {item.realisasi?.tanggal_pelaksanaan
-                              ? new Date(item.realisasi.tanggal_pelaksanaan).toLocaleDateString('id-ID')
-                              : '-'
-                            }
+                            {item.realisasi?.tanggal_pelaksanaan ? new Date(item.realisasi.tanggal_pelaksanaan).toLocaleDateString('id-ID') : '-'}
                           </td>
                         </tr>
                       ))}
@@ -277,9 +257,7 @@ export default function LaporanPage() {
 
           {laporanBulanan.length === 0 && (
             <Card className="border-[#d1e8d5]">
-              <CardContent className="py-12 text-center text-gray-400">
-                Tidak ada kegiatan yang dijadwalkan untuk filter yang dipilih.
-              </CardContent>
+              <CardContent className="py-12 text-center text-gray-400">Tidak ada kegiatan yang dijadwalkan untuk filter yang dipilih.</CardContent>
             </Card>
           )}
         </TabsContent>

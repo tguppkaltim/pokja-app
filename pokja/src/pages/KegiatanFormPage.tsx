@@ -8,13 +8,20 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import { MonthYearPicker, type MonthYear } from '@/components/ui/month-year-picker'
 import { useAuth } from '@/contexts/AuthContext'
-import { mockKegiatan, mockPokja, mockProgramPokok, SCHED_KEYS } from '@/data/mockData'
+import { useData } from '@/contexts/DataContext'
+import { fetchKegiatanById, createKegiatan, updateKegiatan } from '@/lib/db'
+import { SCHED_KEYS } from '@/data/mockData'
 import { toast } from 'sonner'
 
 const BULAN_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+const SCHED_MONTH_MAP: Record<string, number> = {
+  sched_jan: 1, sched_feb: 2, sched_mar: 3, sched_apr: 4,
+  sched_mei: 5, sched_jun: 6, sched_jul: 7, sched_agu: 8,
+  sched_sep: 9, sched_okt: 10, sched_nov: 11, sched_des: 12,
+}
 
 const emptyForm = {
   pokja_id: '',
@@ -23,77 +30,72 @@ const emptyForm = {
   sasaran: '',
   pelaksana: '',
   anggaran: '',
-  jadwal: [] as MonthYear[], // array of {month, year}
-}
-
-function monthYearKey(my: MonthYear) {
-  return `${my.year}-${String(my.month).padStart(2, '0')}`
+  jadwal: [] as MonthYear[],
 }
 
 function compareMonthYear(a: MonthYear, b: MonthYear) {
   return a.year !== b.year ? a.year - b.year : a.month - b.month
 }
 
+function jadwalToSchedFields(jadwal: MonthYear[]): Record<string, boolean> {
+  const fields: Record<string, boolean> = {}
+  for (const key of Object.keys(SCHED_MONTH_MAP)) fields[key] = false
+  for (const my of jadwal) {
+    const key = Object.keys(SCHED_MONTH_MAP).find(k => SCHED_MONTH_MAP[k] === my.month)
+    if (key) fields[key] = true
+  }
+  return fields
+}
+
 export default function KegiatanFormPage() {
   const { user } = useAuth()
+  const { pokja: pokjaList, programPokok } = useData()
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
-
   const [form, setForm] = useState({ ...emptyForm })
   const [pickerValue, setPickerValue] = useState<MonthYear | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(isEdit)
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (isEdit && id) {
-      const existing = mockKegiatan.find(k => k.id === parseInt(id))
-      if (existing) {
-        const jadwal: MonthYear[] = SCHED_KEYS
-          .map((key, idx) => existing[key] ? { month: idx + 1, year: existing.tahun } : null)
-          .filter(Boolean) as MonthYear[]
-        setForm({
-          pokja_id: String(existing.pokja_id),
-          program_pokok_id: String(existing.program_pokok_id),
-          nama_kegiatan: existing.nama_kegiatan,
-          sasaran: existing.sasaran,
-          pelaksana: existing.pelaksana,
-          anggaran: String(existing.anggaran),
-          jadwal,
-        })
-      }
+      fetchKegiatanById(parseInt(id)).then(existing => {
+        if (existing) {
+          const jadwal: MonthYear[] = SCHED_KEYS
+            .map((key, idx) => existing[key] ? { month: idx + 1, year: existing.tahun } : null)
+            .filter(Boolean) as MonthYear[]
+          setForm({
+            pokja_id: String(existing.pokja_id),
+            program_pokok_id: String(existing.program_pokok_id),
+            nama_kegiatan: existing.nama_kegiatan,
+            sasaran: existing.sasaran,
+            pelaksana: existing.pelaksana,
+            anggaran: String(existing.anggaran),
+            jadwal,
+          })
+        }
+      }).finally(() => setIsLoading(false))
     } else if (user?.role === 'operator' && user.pokja_id) {
       setForm(prev => ({ ...prev, pokja_id: String(user.pokja_id) }))
     }
   }, [isEdit, id, user])
 
-  const filteredProgram = mockProgramPokok.filter(
-    p => form.pokja_id ? p.pokja_id === parseInt(form.pokja_id) : true
-  )
-
+  const filteredProgram = programPokok.filter(p => form.pokja_id ? p.pokja_id === parseInt(form.pokja_id) : true)
   const pokjaOptions = user?.role === 'operator' && user.pokja_id
-    ? mockPokja.filter(p => p.id === user.pokja_id)
-    : mockPokja
+    ? pokjaList.filter(p => p.id === user.pokja_id)
+    : pokjaList
 
   function addJadwal(my: MonthYear | undefined) {
     if (!my) return
     const exists = form.jadwal.some(j => j.month === my.month && j.year === my.year)
-    if (exists) {
-      toast.info(`${BULAN_FULL[my.month - 1]} ${my.year} sudah ada dalam jadwal.`)
-      setPickerValue(undefined)
-      return
-    }
-    setForm(prev => ({
-      ...prev,
-      jadwal: [...prev.jadwal, my].sort(compareMonthYear),
-    }))
+    if (exists) { toast.info(`${BULAN_FULL[my.month - 1]} ${my.year} sudah ada dalam jadwal.`); setPickerValue(undefined); return }
+    setForm(prev => ({ ...prev, jadwal: [...prev.jadwal, my].sort(compareMonthYear) }))
     setPickerValue(undefined)
   }
 
   function removeJadwal(my: MonthYear) {
-    setForm(prev => ({
-      ...prev,
-      jadwal: prev.jadwal.filter(j => !(j.month === my.month && j.year === my.year)),
-    }))
+    setForm(prev => ({ ...prev, jadwal: prev.jadwal.filter(j => !(j.month === my.month && j.year === my.year)) }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -106,12 +108,41 @@ export default function KegiatanFormPage() {
       toast.error('Tambahkan minimal satu jadwal pelaksanaan.')
       return
     }
-    setIsLoading(true)
-    await new Promise(r => setTimeout(r, 800))
-    toast.success(isEdit ? 'Kegiatan berhasil diperbarui.' : 'Kegiatan berhasil ditambahkan.')
-    setIsLoading(false)
-    navigate('/kegiatan')
+    if (!user) return
+
+    const tahun = form.jadwal[0].year
+    const schedFields = jadwalToSchedFields(form.jadwal)
+
+    setIsSaving(true)
+    try {
+      const payload = {
+        pokja_id: parseInt(form.pokja_id),
+        program_pokok_id: parseInt(form.program_pokok_id),
+        nama_kegiatan: form.nama_kegiatan,
+        sasaran: form.sasaran,
+        pelaksana: form.pelaksana,
+        anggaran: parseInt(form.anggaran) || 0,
+        tahun,
+        ...schedFields,
+        created_by: user.id,
+      }
+
+      if (isEdit && id) {
+        await updateKegiatan(parseInt(id), payload)
+        toast.success('Kegiatan berhasil diperbarui.')
+      } else {
+        await createKegiatan(payload as Parameters<typeof createKegiatan>[0])
+        toast.success('Kegiatan berhasil ditambahkan.')
+      }
+      navigate('/kegiatan')
+    } catch {
+      toast.error('Gagal menyimpan. Coba lagi.')
+    } finally {
+      setIsSaving(false)
+    }
   }
+
+  if (isLoading) return <div className="py-20 text-center text-gray-400">Memuat data...</div>
 
   return (
     <div className="space-y-5 max-w-2xl">
@@ -120,14 +151,9 @@ export default function KegiatanFormPage() {
           <ArrowLeft className="w-4 h-4 mr-1" /> Kembali
         </Button>
       </div>
-
       <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">
-          {isEdit ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {isEdit ? 'Perbarui data rencana kegiatan.' : 'Input rencana kegiatan ke dalam POA.'}
-        </p>
+        <h1 className="text-2xl font-bold text-[#1B6B35]">{isEdit ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}</h1>
+        <p className="text-sm text-gray-500 mt-1">{isEdit ? 'Perbarui data rencana kegiatan.' : 'Input rencana kegiatan ke dalam POA.'}</p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -136,140 +162,69 @@ export default function KegiatanFormPage() {
             <CardTitle className="text-base text-[#1B6B35]">Informasi Kegiatan</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-
-            {/* Pokja & Program Pokok */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
-                <Select
-                  value={form.pokja_id}
-                  onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))}
-                  disabled={user?.role === 'operator'}
-                >
-                  <SelectTrigger className="border-[#d1e8d5]">
-                    <SelectValue placeholder="Pilih Pokja" />
-                  </SelectTrigger>
+                <Select value={form.pokja_id} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))} disabled={user?.role === 'operator'}>
+                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
-                    {pokjaOptions.map(p => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
+                    {pokjaOptions.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
                 <Label>Program Pokok <span className="text-red-500">*</span></Label>
-                <Select
-                  value={form.program_pokok_id}
-                  onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v }))}
-                >
-                  <SelectTrigger className="border-[#d1e8d5]">
-                    <SelectValue placeholder="Pilih Program Pokok" />
-                  </SelectTrigger>
+                <Select value={form.program_pokok_id} onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v }))}>
+                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Program Pokok" /></SelectTrigger>
                   <SelectContent>
-                    {filteredProgram.map(p => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
+                    {filteredProgram.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Nama Kegiatan */}
             <div className="space-y-1.5">
               <Label>Nama Kegiatan <span className="text-red-500">*</span></Label>
-              <Textarea
-                placeholder="Deskripsikan kegiatan secara singkat dan jelas..."
-                value={form.nama_kegiatan}
-                onChange={e => setForm(prev => ({ ...prev, nama_kegiatan: e.target.value }))}
-                className="border-[#d1e8d5] min-h-20"
-              />
+              <Textarea placeholder="Deskripsikan kegiatan secara singkat dan jelas..." value={form.nama_kegiatan} onChange={e => setForm(prev => ({ ...prev, nama_kegiatan: e.target.value }))} className="border-[#d1e8d5] min-h-20" />
             </div>
 
-            {/* Sasaran & Pelaksana */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sasaran</Label>
-                <Input
-                  placeholder="Target peserta/penerima manfaat"
-                  value={form.sasaran}
-                  onChange={e => setForm(prev => ({ ...prev, sasaran: e.target.value }))}
-                  className="border-[#d1e8d5]"
-                />
+                <Input placeholder="Target peserta/penerima manfaat" value={form.sasaran} onChange={e => setForm(prev => ({ ...prev, sasaran: e.target.value }))} className="border-[#d1e8d5]" />
               </div>
               <div className="space-y-1.5">
                 <Label>Pelaksana</Label>
-                <Input
-                  placeholder="Penanggung jawab pelaksanaan"
-                  value={form.pelaksana}
-                  onChange={e => setForm(prev => ({ ...prev, pelaksana: e.target.value }))}
-                  className="border-[#d1e8d5]"
-                />
+                <Input placeholder="Penanggung jawab pelaksanaan" value={form.pelaksana} onChange={e => setForm(prev => ({ ...prev, pelaksana: e.target.value }))} className="border-[#d1e8d5]" />
               </div>
             </div>
 
-            {/* Anggaran */}
             <div className="space-y-1.5">
               <Label>Anggaran (Rp)</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={form.anggaran}
-                onChange={e => setForm(prev => ({ ...prev, anggaran: e.target.value }))}
-                className="border-[#d1e8d5]"
-                min={0}
-              />
+              <Input type="number" placeholder="0" value={form.anggaran} onChange={e => setForm(prev => ({ ...prev, anggaran: e.target.value }))} className="border-[#d1e8d5]" min={0} />
             </div>
 
             <Separator className="bg-[#EAF5EC]" />
 
-            {/* Jadwal Pelaksanaan — Month+Year Picker */}
             <div className="space-y-3">
               <div>
                 <Label>Jadwal Pelaksanaan <span className="text-red-500">*</span></Label>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Pilih bulan dan tahun ketika kegiatan akan dilaksanakan. Bisa lebih dari satu.
-                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Pilih bulan dan tahun ketika kegiatan akan dilaksanakan.</p>
               </div>
-
-              {/* Picker + tombol tambah */}
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
-                  <MonthYearPicker
-                    value={pickerValue}
-                    onChange={setPickerValue}
-                    placeholder="Pilih bulan & tahun..."
-                    className="border-[#d1e8d5]"
-                    minYear={2024}
-                    maxYear={2030}
-                  />
+                  <MonthYearPicker value={pickerValue} onChange={setPickerValue} placeholder="Pilih bulan & tahun..." className="border-[#d1e8d5]" minYear={2024} maxYear={2030} />
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => addJadwal(pickerValue)}
-                  disabled={!pickerValue}
-                  variant="outline"
-                  className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC] shrink-0"
-                >
+                <Button type="button" onClick={() => addJadwal(pickerValue)} disabled={!pickerValue} variant="outline" className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC] shrink-0">
                   <Plus className="w-4 h-4 mr-1" /> Tambah
                 </Button>
               </div>
-
-              {/* Chips jadwal terpilih */}
               {form.jadwal.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {form.jadwal.map(my => (
-                    <div
-                      key={monthYearKey(my)}
-                      className="flex items-center gap-1.5 bg-[#1B6B35] text-white text-sm pl-3 pr-2 py-1 rounded-full"
-                    >
+                    <div key={`${my.year}-${my.month}`} className="flex items-center gap-1.5 bg-[#1B6B35] text-white text-sm pl-3 pr-2 py-1 rounded-full">
                       <span>{BULAN_FULL[my.month - 1]} {my.year}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeJadwal(my)}
-                        className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
-                        title="Hapus jadwal ini"
-                      >
+                      <button type="button" onClick={() => removeJadwal(my)} className="hover:bg-white/20 rounded-full p-0.5 transition-colors">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -281,18 +236,13 @@ export default function KegiatanFormPage() {
                 </div>
               )}
             </div>
-
           </CardContent>
         </Card>
 
         <div className="flex justify-end gap-3 mt-4">
-          <Button type="button" variant="outline" onClick={() => navigate(-1)} className="border-[#d1e8d5]">
-            Batal
-          </Button>
-          <Button type="submit" className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isLoading}>
-            {isLoading ? 'Menyimpan...' : (
-              <><Save className="w-4 h-4 mr-1" /> {isEdit ? 'Simpan Perubahan' : 'Tambahkan Kegiatan'}</>
-            )}
+          <Button type="button" variant="outline" onClick={() => navigate(-1)} className="border-[#d1e8d5]">Batal</Button>
+          <Button type="submit" className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
+            {isSaving ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-1" /> {isEdit ? 'Simpan Perubahan' : 'Tambahkan Kegiatan'}</>}
           </Button>
         </div>
       </form>

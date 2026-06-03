@@ -2,7 +2,7 @@ import { Bell } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/AuthContext'
-import { mockPokja } from '@/data/mockData'
+import { useData } from '@/contexts/DataContext'
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Administrator',
@@ -18,9 +18,10 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function Header() {
   const { user } = useAuth()
+  const { pokja: pokjaList } = useData()
   if (!user) return null
 
-  const pokja = user.pokja_id ? mockPokja.find(p => p.id === user.pokja_id) : null
+  const pokja = user.pokja_id ? pokjaList.find(p => p.id === user.pokja_id) : null
   const initials = user.full_name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 
   return (

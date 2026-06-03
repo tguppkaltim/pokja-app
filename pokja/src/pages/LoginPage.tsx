@@ -1,36 +1,42 @@
-import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Loader2, Eye, EyeOff } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
+import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-  const { login } = useAuth()
-  const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!email || !password) {
-      setError('Email dan password harus diisi.')
-      return
+      setError("Email dan password harus diisi.");
+      return;
     }
-    setError('')
-    setIsLoading(true)
+    setError("");
+    setIsLoading(true);
     try {
-      await login(email, password)
-      navigate('/dashboard')
+      await login(email, password);
+      navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan.')
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -40,19 +46,21 @@ export default function LoginPage() {
         {/* Logo & Title */}
         <div className="text-center space-y-3">
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-[#1B6B35] rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">PKK</span>
-            </div>
+            <img src="/logo-pemprov.png" alt="Logo Pemprov Kaltim" className="h-20 w-auto" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#1B6B35]">TP PKK Kaltim</h1>
-            <p className="text-sm text-gray-500">Sistem Monitoring Rencana & Realisasi Kegiatan</p>
+            <p className="text-sm text-gray-500">
+              Sistem Monitoring Rencana & Realisasi Kegiatan
+            </p>
           </div>
         </div>
 
         <Card className="shadow-md border-[#d1e8d5]">
           <CardHeader className="pb-4">
-            <CardTitle className="text-[#1B6B35] text-lg">Masuk ke Sistem</CardTitle>
+            <CardTitle className="text-[#1B6B35] text-lg">
+              Masuk ke Sistem
+            </CardTitle>
             <CardDescription>
               Gunakan akun yang diberikan oleh Administrator.
             </CardDescription>
@@ -66,7 +74,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="nama@pkk-kaltim.go.id"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                   className="border-[#d1e8d5] focus-visible:ring-[#52B788]"
                 />
@@ -76,10 +84,10 @@ export default function LoginPage() {
                 <div className="relative">
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
                     className="border-[#d1e8d5] focus-visible:ring-[#52B788] pr-10"
                   />
@@ -88,7 +96,11 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -109,7 +121,9 @@ export default function LoginPage() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Memverifikasi...
                   </>
-                ) : 'Masuk'}
+                ) : (
+                  "Masuk"
+                )}
               </Button>
             </form>
 
@@ -121,18 +135,10 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Demo hint */}
-        <div className="bg-[#EAF5EC] rounded-xl p-4 text-xs text-[#2E8B57] space-y-1">
-          <p className="font-semibold">Akun Demo:</p>
-          <p>Admin: admin@pkk-kaltim.go.id / admin123</p>
-          <p>Operator Pokja I: pokja1@pkk-kaltim.go.id / pokja1123</p>
-          <p>Viewer: ketua@pkk-kaltim.go.id / ketua123</p>
-        </div>
-
         <p className="text-center text-xs text-gray-400">
           &copy; 2026 Pemerintah Provinsi Kalimantan Timur
         </p>
       </div>
     </div>
-  )
+  );
 }

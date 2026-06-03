@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { User } from '@/types'
-import { mockUsers, mockCredentials } from '@/data/mockData'
+import { supabase } from '@/lib/supabase'
 
 interface AuthContextValue {
   user: User | null
   login: (email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   isLoading: boolean
 }
 
@@ -16,34 +16,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('pkk_user')
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored))
-      } catch {
-        localStorage.removeItem('pkk_user')
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id)
+      } else {
+        setIsLoading(false)
       }
-    }
-    setIsLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchProfile(session.user.id)
+      } else {
+        setUser(null)
+        setIsLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  async function login(email: string, password: string) {
-    await new Promise(r => setTimeout(r, 600))
-    const correctPassword = mockCredentials[email]
-    if (!correctPassword || correctPassword !== password) {
-      throw new Error('Email atau password salah.')
+  async function fetchProfile(userId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (!error && data) {
+      setUser(data as User)
     }
-    const found = mockUsers.find(u => u.email === email && u.is_active)
-    if (!found) {
-      throw new Error('Akun tidak aktif. Hubungi Administrator.')
-    }
-    setUser(found)
-    localStorage.setItem('pkk_user', JSON.stringify(found))
+    setIsLoading(false)
   }
 
-  function logout() {
-    setUser(null)
-    localStorage.removeItem('pkk_user')
+  async function login(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw new Error(error.message)
+  }
+
+  async function logout() {
+    await supabase.auth.signOut()
   }
 
   return (

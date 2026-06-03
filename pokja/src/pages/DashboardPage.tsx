@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -10,10 +10,13 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
-import { mockKegiatan, mockRealisasi, mockPokja, mockProgramPokok, BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
+import { useData } from '@/contexts/DataContext'
+import { fetchKegiatan, fetchRealisasi } from '@/lib/db'
+import type { Kegiatan, RealisasiKegiatan } from '@/types'
+import { BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
 
-const CURRENT_MONTH = 6
-const CURRENT_YEAR = 2026
+const CURRENT_MONTH = new Date().getMonth() + 1
+const CURRENT_YEAR = new Date().getFullYear()
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -33,13 +36,19 @@ function getStatusBadge(status: string | null) {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const { pokja: pokjaList, programPokok } = useData()
   const [filterPokja, setFilterPokja] = useState<string>('all')
+  const [kegiatan, setKegiatan] = useState<Kegiatan[]>([])
+  const [realisasi, setRealisasi] = useState<RealisasiKegiatan[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const kegiatan = useMemo(() => {
-    if (user?.role === 'operator' && user.pokja_id) {
-      return mockKegiatan.filter(k => k.pokja_id === user.pokja_id && k.tahun === CURRENT_YEAR)
-    }
-    return mockKegiatan.filter(k => k.tahun === CURRENT_YEAR)
+  useEffect(() => {
+    const opts = user?.role === 'operator' && user.pokja_id
+      ? { pokjaId: user.pokja_id, tahun: CURRENT_YEAR }
+      : { tahun: CURRENT_YEAR }
+    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun: CURRENT_YEAR })])
+      .then(([k, r]) => { setKegiatan(k); setRealisasi(r) })
+      .finally(() => setIsLoading(false))
   }, [user])
 
   const filteredKegiatan = useMemo(() => {
@@ -47,7 +56,6 @@ export default function DashboardPage() {
     return kegiatan.filter(k => k.pokja_id === parseInt(filterPokja))
   }, [kegiatan, filterPokja])
 
-  // KPI kegiatan
   const allScheduled = useMemo(() => {
     let scheduled = 0, terlaksana = 0, belum = 0
     kegiatan.forEach(k => {
@@ -55,9 +63,9 @@ export default function DashboardPage() {
         const bulan = idx + 1
         if (k[key]) {
           scheduled++
-          const realisasi = mockRealisasi.find(r => r.kegiatan_id === k.id && r.bulan === bulan && r.tahun === CURRENT_YEAR)
-          if (realisasi) {
-            if (realisasi.status === 'terlaksana') terlaksana++
+          const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === bulan && r.tahun === CURRENT_YEAR)
+          if (r) {
+            if (r.status === 'terlaksana') terlaksana++
           } else if (bulan < CURRENT_MONTH) {
             belum++
           }
@@ -65,18 +73,16 @@ export default function DashboardPage() {
       })
     })
     return { scheduled, terlaksana, belum }
-  }, [kegiatan])
+  }, [kegiatan, realisasi])
 
   const pctRealisasi = allScheduled.scheduled > 0
     ? Math.round((allScheduled.terlaksana / allScheduled.scheduled) * 100)
     : 0
 
-  // Bar chart — realisasi per pokja
   const pokjaChartData = useMemo(() => {
     const pokjaToShow = user?.role === 'operator' && user.pokja_id
-      ? mockPokja.filter(p => p.id === user.pokja_id)
-      : mockPokja
-
+      ? pokjaList.filter(p => p.id === user.pokja_id)
+      : pokjaList
     return pokjaToShow.map(pokja => {
       const keg = kegiatan.filter(k => k.pokja_id === pokja.id)
       let sched = 0, real = 0
@@ -84,99 +90,75 @@ export default function DashboardPage() {
         SCHED_KEYS.forEach((key, idx) => {
           if (k[key]) {
             sched++
-            const r = mockRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === CURRENT_YEAR)
+            const r = realisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === CURRENT_YEAR)
             if (r && r.status === 'terlaksana') real++
           }
         })
       })
-      return {
-        name: pokja.name,
-        pct: sched > 0 ? Math.round((real / sched) * 100) : 0,
-        terlaksana: real,
-        total: sched,
-      }
+      return { name: pokja.name, pct: sched > 0 ? Math.round((real / sched) * 100) : 0, terlaksana: real, total: sched }
     })
-  }, [kegiatan, user])
+  }, [kegiatan, realisasi, pokjaList, user])
 
-  // Line chart — tren bulanan
   const lineData = useMemo(() => {
     return BULAN_LABELS.slice(0, CURRENT_MONTH).map((bulan, idx) => {
       const bulanNum = idx + 1
       const scheduledThisMonth = kegiatan.filter(k => k[SCHED_KEYS[idx]]).length
-      const realizedThisMonth = mockRealisasi.filter(
-        r => r.bulan === bulanNum && r.tahun === CURRENT_YEAR &&
-          r.status === 'terlaksana' &&
-          kegiatan.find(k => k.id === r.kegiatan_id)
+      const realizedThisMonth = realisasi.filter(
+        r => r.bulan === bulanNum && r.tahun === CURRENT_YEAR && r.status === 'terlaksana' && kegiatan.find(k => k.id === r.kegiatan_id)
       ).length
       return { bulan, dijadwalkan: scheduledThisMonth, terlaksana: realizedThisMonth }
     })
-  }, [kegiatan])
+  }, [kegiatan, realisasi])
 
-  // Pie chart
   const pieData = [
     { name: 'Terlaksana', value: allScheduled.terlaksana, color: '#1B6B35' },
     { name: 'Belum', value: allScheduled.belum, color: '#ef4444' },
     { name: 'Akan Datang', value: allScheduled.scheduled - allScheduled.terlaksana - allScheduled.belum, color: '#93c5fd' },
   ]
 
-  // Chart anggaran — rencana vs realisasi per pokja
   const anggaranChartData = useMemo(() => {
     const pokjaToShow = user?.role === 'operator' && user.pokja_id
-      ? mockPokja.filter(p => p.id === user.pokja_id)
-      : mockPokja
-
+      ? pokjaList.filter(p => p.id === user.pokja_id)
+      : pokjaList
     return pokjaToShow.map(pokja => {
       const keg = kegiatan.filter(k => k.pokja_id === pokja.id)
-
       const rencana = keg.reduce((sum, k) => sum + k.anggaran, 0)
-
-      // Realisasi anggaran dihitung proporsional:
-      // anggaran_per_sesi = anggaran / total_sesi_dijadwalkan
-      // realisasi = jumlah_sesi_terlaksana × anggaran_per_sesi
       const realisasiAnggaran = keg.reduce((sum, k) => {
         const totalSesi = SCHED_KEYS.filter(key => k[key]).length
         if (totalSesi === 0) return sum
         const anggaranPerSesi = k.anggaran / totalSesi
-        const sesiTerlaksana = mockRealisasi.filter(
-          r => r.kegiatan_id === k.id && r.tahun === CURRENT_YEAR && r.status === 'terlaksana'
-        ).length
+        const sesiTerlaksana = realisasi.filter(r => r.kegiatan_id === k.id && r.tahun === CURRENT_YEAR && r.status === 'terlaksana').length
         return sum + sesiTerlaksana * anggaranPerSesi
       }, 0)
-
-      return {
-        name: pokja.name,
-        rencana,
-        realisasi: Math.round(realisasiAnggaran),
-        pct: rencana > 0 ? Math.round((realisasiAnggaran / rencana) * 100) : 0,
-      }
+      return { name: pokja.name, rencana, realisasi: Math.round(realisasiAnggaran), pct: rencana > 0 ? Math.round((realisasiAnggaran / rencana) * 100) : 0 }
     })
-  }, [kegiatan, user])
+  }, [kegiatan, realisasi, pokjaList, user])
 
-  // KPI anggaran total
   const totalRencana = anggaranChartData.reduce((s, d) => s + d.rencana, 0)
   const totalRealisasi = anggaranChartData.reduce((s, d) => s + d.realisasi, 0)
   const pctSerapan = totalRencana > 0 ? Math.round((totalRealisasi / totalRencana) * 100) : 0
 
-  // Tabel ringkasan
   const tableData = filteredKegiatan.map(k => {
-    const prog = mockProgramPokok.find(p => p.id === k.program_pokok_id)
-    const pokja = mockPokja.find(p => p.id === k.pokja_id)
-    const realisasi = mockRealisasi.find(r => r.kegiatan_id === k.id && r.bulan === CURRENT_MONTH && r.tahun === CURRENT_YEAR)
+    const prog = programPokok.find(p => p.id === k.program_pokok_id)
+    const pokja = pokjaList.find(p => p.id === k.pokja_id)
+    const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === CURRENT_MONTH && r.tahun === CURRENT_YEAR)
     const scheduledThisMonth = k[SCHED_KEYS[CURRENT_MONTH - 1]]
-    const isLate = scheduledThisMonth && !realisasi
-
     return {
       ...k,
       programName: prog?.name ?? '-',
       pokjaName: pokja?.name ?? '-',
-      statusBulanIni: realisasi?.status ?? (scheduledThisMonth ? 'menunggu' : 'tidak_dijadwalkan'),
-      isLate,
+      statusBulanIni: r?.status ?? (scheduledThisMonth ? 'menunggu' : 'tidak_dijadwalkan'),
+      isLate: scheduledThisMonth && !r,
     }
   })
 
   const pokjaForFilter = user?.role === 'operator' && user.pokja_id
-    ? mockPokja.filter(p => p.id === user.pokja_id)
-    : mockPokja
+    ? pokjaList.filter(p => p.id === user.pokja_id)
+    : pokjaList
+
+  if (isLoading) {
+    return <div className="py-20 text-center text-gray-400">Memuat data dashboard...</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -203,7 +185,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="border-[#d1e8d5]">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
@@ -218,7 +199,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="border-[#d1e8d5]">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
@@ -233,7 +213,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="border-[#d1e8d5]">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
@@ -266,7 +245,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="border-[#d1e8d5]">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
@@ -286,7 +264,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Charts row — realisasi per pokja + pie */}
+      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 border-[#d1e8d5]">
           <CardHeader className="pb-2">
@@ -300,9 +278,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} unit="%" />
                 <Tooltip
-                  formatter={(val, _name, props) =>
-                    [`${val}% (${props.payload.terlaksana}/${props.payload.total})`, 'Realisasi']
-                  }
+                  formatter={(val, _name, props) => [`${val}% (${props.payload.terlaksana}/${props.payload.total})`, 'Realisasi']}
                   contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }}
                 />
                 <Bar dataKey="pct" fill="#1B6B35" radius={[4, 4, 0, 0]} />
@@ -310,7 +286,6 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
         <Card className="border-[#d1e8d5]">
           <CardHeader className="pb-2">
             <CardTitle className="text-base text-[#1B6B35]">Komposisi Status</CardTitle>
@@ -320,9 +295,7 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
-                  {pieData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
+                  {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                 </Pie>
                 <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
                 <Tooltip contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }} />
@@ -332,7 +305,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Line chart — tren realisasi bulanan */}
+      {/* Line chart */}
       <Card className="border-[#d1e8d5]">
         <CardHeader className="pb-2">
           <CardTitle className="text-base text-[#1B6B35]">Tren Realisasi Bulanan</CardTitle>
@@ -353,42 +326,27 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Chart anggaran — rencana vs realisasi per pokja */}
+      {/* Anggaran chart */}
       <Card className="border-[#d1e8d5]">
         <CardHeader className="pb-2">
           <CardTitle className="text-base text-[#1B6B35]">Rencana vs Realisasi Anggaran per Pokja</CardTitle>
-          <CardDescription>
-            Estimasi penyerapan anggaran berdasarkan kegiatan yang terlaksana — dalam jutaan Rupiah
-          </CardDescription>
+          <CardDescription>Estimasi penyerapan anggaran berdasarkan kegiatan yang terlaksana — dalam jutaan Rupiah</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={anggaranChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EAF5EC" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                tickFormatter={formatJuta}
-                width={48}
-              />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={formatJuta} width={48} />
               <Tooltip
-                formatter={(val, name) => [
-                  formatRupiah(Number(val)),
-                  name === 'rencana' ? 'Rencana Anggaran' : 'Realisasi Anggaran',
-                ]}
+                formatter={(val, name) => [formatRupiah(Number(val)), name === 'rencana' ? 'Rencana Anggaran' : 'Realisasi Anggaran']}
                 contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }}
               />
-              <Legend
-                formatter={name => name === 'rencana' ? 'Rencana' : 'Realisasi'}
-                iconSize={10}
-                wrapperStyle={{ fontSize: 12 }}
-              />
+              <Legend formatter={name => name === 'rencana' ? 'Rencana' : 'Realisasi'} iconSize={10} wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="rencana" fill="#52B788" radius={[4, 4, 0, 0]} name="rencana" />
               <Bar dataKey="realisasi" fill="#1B6B35" radius={[4, 4, 0, 0]} name="realisasi" />
             </BarChart>
           </ResponsiveContainer>
-
-          {/* Tabel ringkasan serapan per pokja */}
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -406,11 +364,7 @@ export default function DashboardPage() {
                     <td className="py-2 px-3 text-right text-gray-600">{formatRupiah(d.rencana)}</td>
                     <td className="py-2 px-3 text-right text-[#1B6B35] font-medium">{formatRupiah(d.realisasi)}</td>
                     <td className="py-2 px-3 text-right">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        d.pct >= 70 ? 'bg-green-100 text-green-700' :
-                        d.pct >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-600'
-                      }`}>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${d.pct >= 70 ? 'bg-green-100 text-green-700' : d.pct >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
                         {d.pct}%
                       </span>
                     </td>
@@ -423,11 +377,7 @@ export default function DashboardPage() {
                   <td className="py-2 px-3 text-right font-semibold text-gray-700">{formatRupiah(totalRencana)}</td>
                   <td className="py-2 px-3 text-right font-bold text-[#1B6B35]">{formatRupiah(totalRealisasi)}</td>
                   <td className="py-2 px-3 text-right">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      pctSerapan >= 70 ? 'bg-green-100 text-green-700' :
-                      pctSerapan >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-600'
-                    }`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${pctSerapan >= 70 ? 'bg-green-100 text-green-700' : pctSerapan >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
                       {pctSerapan}%
                     </span>
                   </td>
@@ -453,9 +403,7 @@ export default function DashboardPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua Pokja</SelectItem>
-                  {pokjaForFilter.map(p => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
+                  {pokjaForFilter.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
@@ -500,9 +448,7 @@ export default function DashboardPage() {
                   </tr>
                 ))}
                 {tableData.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Tidak ada data kegiatan.</td>
-                  </tr>
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Tidak ada data kegiatan.</td></tr>
                 )}
               </tbody>
             </table>

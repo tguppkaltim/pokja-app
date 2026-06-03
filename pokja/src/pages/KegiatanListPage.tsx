@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Search, Pencil, Eye, Trash2 } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -12,7 +12,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import { mockKegiatan, mockPokja, mockProgramPokok, BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
+import { useData } from '@/contexts/DataContext'
+import { fetchKegiatan, deleteKegiatan } from '@/lib/db'
+import type { Kegiatan } from '@/types'
+import { BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
+import { toast } from 'sonner'
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -20,21 +24,28 @@ function formatRupiah(n: number) {
 
 export default function KegiatanListPage() {
   const { user } = useAuth()
+  const { pokja: pokjaList, programPokok } = useData()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filterPokja, setFilterPokja] = useState<string>(
     user?.role === 'operator' && user.pokja_id ? String(user.pokja_id) : 'all'
   )
-  const [filterTahun, setFilterTahun] = useState('2026')
+  const [filterTahun, setFilterTahun] = useState(String(new Date().getFullYear()))
+  const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
+    fetchKegiatan(opts).then(setAllKegiatan).finally(() => setIsLoading(false))
+  }, [user])
 
   const pokjaForFilter = user?.role === 'operator' && user.pokja_id
-    ? mockPokja.filter(p => p.id === user.pokja_id)
-    : mockPokja
+    ? pokjaList.filter(p => p.id === user.pokja_id)
+    : pokjaList
 
   const data = useMemo(() => {
-    return mockKegiatan
+    return allKegiatan
       .filter(k => {
-        if (user?.role === 'operator' && user.pokja_id && k.pokja_id !== user.pokja_id) return false
         if (filterPokja !== 'all' && k.pokja_id !== parseInt(filterPokja)) return false
         if (k.tahun !== parseInt(filterTahun)) return false
         if (search && !k.nama_kegiatan.toLowerCase().includes(search.toLowerCase())) return false
@@ -42,16 +53,27 @@ export default function KegiatanListPage() {
       })
       .map(k => ({
         ...k,
-        pokjaName: mockPokja.find(p => p.id === k.pokja_id)?.name ?? '-',
-        programName: mockProgramPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
-        jadwal: SCHED_KEYS
-          .map((key, idx) => k[key] ? BULAN_LABELS[idx] : null)
-          .filter(Boolean)
-          .join(', '),
+        pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
+        programName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
+        jadwal: SCHED_KEYS.map((key, idx) => k[key] ? BULAN_LABELS[idx] : null).filter(Boolean).join(', '),
       }))
-  }, [filterPokja, filterTahun, search, user])
+  }, [allKegiatan, filterPokja, filterTahun, search, pokjaList, programPokok])
+
+  async function handleDelete(id: number, nama: string) {
+    try {
+      await deleteKegiatan(id)
+      setAllKegiatan(prev => prev.filter(k => k.id !== id))
+      toast.success(`Kegiatan "${nama}" berhasil dihapus.`)
+    } catch {
+      toast.error('Gagal menghapus kegiatan.')
+    }
+  }
 
   const canEdit = user?.role === 'super_admin' || user?.role === 'operator'
+
+  if (isLoading) {
+    return <div className="py-20 text-center text-gray-400">Memuat data kegiatan...</div>
+  }
 
   return (
     <div className="space-y-5">
@@ -67,7 +89,6 @@ export default function KegiatanListPage() {
         )}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -79,9 +100,7 @@ export default function KegiatanListPage() {
           />
         </div>
         <Select value={filterTahun} onValueChange={v => v && setFilterTahun(v)}>
-          <SelectTrigger className="w-28 border-[#d1e8d5]">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="w-28 border-[#d1e8d5]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="2026">2026</SelectItem>
             <SelectItem value="2025">2025</SelectItem>
@@ -89,14 +108,10 @@ export default function KegiatanListPage() {
         </Select>
         {user?.role !== 'operator' && (
           <Select value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
-            <SelectTrigger className="w-40 border-[#d1e8d5]">
-              <SelectValue placeholder="Filter Pokja" />
-            </SelectTrigger>
+            <SelectTrigger className="w-40 border-[#d1e8d5]"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Pokja</SelectItem>
-              {pokjaForFilter.map(p => (
-                <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-              ))}
+              {pokjaForFilter.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -131,50 +146,36 @@ export default function KegiatanListPage() {
                       <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-xs hidden lg:table-cell">{k.programName}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800 max-w-xs">
-                      <p className="line-clamp-2">{k.nama_kegiatan}</p>
-                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-800 max-w-xs"><p className="line-clamp-2">{k.nama_kegiatan}</p></td>
                     <td className="px-4 py-3 text-gray-500 text-xs hidden xl:table-cell">{k.sasaran}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell max-w-32">
-                      <p className="truncate">{k.jadwal || '-'}</p>
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell whitespace-nowrap">
-                      {formatRupiah(k.anggaran)}
-                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell max-w-32"><p className="truncate">{k.jadwal || '-'}</p></td>
+                    <td className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell whitespace-nowrap">{formatRupiah(k.anggaran)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => navigate(`/kegiatan/${k.id}`)}
-                          className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-[#2E8B57] hover:bg-[#EAF5EC]"
-                        >
+                        <button onClick={() => navigate(`/kegiatan/${k.id}`)} className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-[#2E8B57] hover:bg-[#EAF5EC]">
                           <Eye className="w-4 h-4" />
                         </button>
                         {canEdit && (
                           <>
-                            <button
-                              onClick={() => navigate(`/kegiatan/${k.id}/edit`)}
-                              className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-50"
-                            >
+                            <button onClick={() => navigate(`/kegiatan/${k.id}/edit`)} className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-50">
                               <Pencil className="w-4 h-4" />
                             </button>
                             <AlertDialog>
-                              <AlertDialogTrigger
-                                render={
-                                  <button className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-red-500 hover:bg-red-50">
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                }
-                              />
+                              <AlertDialogTrigger render={
+                                <button className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-red-500 hover:bg-red-50">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              } />
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Hapus Kegiatan?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Kegiatan "<strong>{k.nama_kegiatan}</strong>" akan dihapus. Tindakan ini tidak dapat dibatalkan.
+                                    Kegiatan "<strong>{k.nama_kegiatan}</strong>" akan dihapus beserta seluruh data realisasinya.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Batal</AlertDialogCancel>
-                                  <AlertDialogAction className="bg-red-600 hover:bg-red-700">Hapus</AlertDialogAction>
+                                  <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDelete(k.id, k.nama_kegiatan)}>Hapus</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -185,11 +186,7 @@ export default function KegiatanListPage() {
                   </tr>
                 ))}
                 {data.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-gray-400">
-                      Tidak ada kegiatan yang sesuai filter.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Tidak ada kegiatan yang sesuai filter.</td></tr>
                 )}
               </tbody>
             </table>

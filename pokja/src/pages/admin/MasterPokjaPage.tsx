@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,15 +7,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { mockPokja as initialPokja } from '@/data/mockData'
 import type { Pokja } from '@/types'
+import { fetchPokja, createPokja, updatePokja, deletePokja } from '@/lib/db'
 import { toast } from 'sonner'
 
 export default function MasterPokjaPage() {
-  const [pokjaList, setPokjaList] = useState<Pokja[]>(initialPokja)
+  const [pokjaList, setPokjaList] = useState<Pokja[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
   const [editItem, setEditItem] = useState<Pokja | null>(null)
   const [form, setForm] = useState({ name: '', description: '' })
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    fetchPokja().then(setPokjaList).finally(() => setIsLoading(false))
+  }, [])
 
   function openAdd() {
     setEditItem(null)
@@ -29,30 +35,39 @@ export default function MasterPokjaPage() {
     setIsOpen(true)
   }
 
-  function handleSave() {
-    if (!form.name) {
-      toast.error('Nama Pokja wajib diisi.')
-      return
-    }
-    if (editItem) {
-      setPokjaList(prev => prev.map(p => p.id === editItem.id ? { ...p, name: form.name, description: form.description } : p))
-      toast.success('Data Pokja diperbarui.')
-    } else {
-      const next: Pokja = {
-        id: Math.max(...pokjaList.map(p => p.id)) + 1,
-        name: form.name,
-        description: form.description,
-        created_at: new Date().toISOString(),
+  async function handleSave() {
+    if (!form.name) { toast.error('Nama Pokja wajib diisi.'); return }
+    setIsSaving(true)
+    try {
+      if (editItem) {
+        await updatePokja(editItem.id, form)
+        setPokjaList(prev => prev.map(p => p.id === editItem.id ? { ...p, ...form } : p))
+        toast.success('Data Pokja diperbarui.')
+      } else {
+        const newPokja = await createPokja(form)
+        setPokjaList(prev => [...prev, newPokja])
+        toast.success('Pokja baru ditambahkan.')
       }
-      setPokjaList(prev => [...prev, next])
-      toast.success('Pokja baru ditambahkan.')
+      setIsOpen(false)
+    } catch {
+      toast.error('Gagal menyimpan. Coba lagi.')
+    } finally {
+      setIsSaving(false)
     }
-    setIsOpen(false)
   }
 
-  function handleDelete(p: Pokja) {
-    setPokjaList(prev => prev.filter(item => item.id !== p.id))
-    toast.success('Pokja dihapus.')
+  async function handleDelete(p: Pokja) {
+    try {
+      await deletePokja(p.id)
+      setPokjaList(prev => prev.filter(item => item.id !== p.id))
+      toast.success('Pokja dihapus.')
+    } catch {
+      toast.error('Gagal menghapus. Pastikan tidak ada kegiatan yang terkait.')
+    }
+  }
+
+  if (isLoading) {
+    return <div className="py-20 text-center text-gray-400">Memuat data...</div>
   }
 
   return (
@@ -130,8 +145,8 @@ export default function MasterPokjaPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOpen(false)} className="border-[#d1e8d5]">Batal</Button>
-            <Button onClick={handleSave} className="bg-[#1B6B35] hover:bg-[#134D26]">
-              {editItem ? 'Simpan' : 'Tambahkan'}
+            <Button onClick={handleSave} className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
+              {isSaving ? 'Menyimpan...' : editItem ? 'Simpan' : 'Tambahkan'}
             </Button>
           </DialogFooter>
         </DialogContent>

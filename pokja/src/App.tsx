@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { DataProvider } from '@/contexts/DataContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
@@ -102,8 +103,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
-        <Toaster position="top-right" richColors />
+        <DataProvider>
+          <AppRoutes />
+          <Toaster position="top-right" richColors />
+        </DataProvider>
       </AuthProvider>
     </BrowserRouter>
   )
