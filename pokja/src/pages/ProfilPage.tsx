@@ -34,13 +34,14 @@ export default function ProfilPage() {
 
   const initials = user.full_name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
   const pokja = user.pokja_id ? pokjaList.find(p => p.id === user.pokja_id) : null
+  const userId = user.id
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) { toast.error('Nama tidak boleh kosong.'); return }
     setIsSavingName(true)
     try {
-      await updateProfile(user.id, { full_name: name.trim() })
+      await updateProfile(userId, { full_name: name.trim() })
       toast.success('Nama berhasil diperbarui.')
     } catch {
       toast.error('Gagal memperbarui nama.')

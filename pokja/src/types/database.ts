@@ -31,6 +31,7 @@ export interface Database {
           is_active?: boolean
           created_at?: string
         }
+        Relationships: []
       }
       pokja: {
         Row: {
@@ -51,6 +52,7 @@ export interface Database {
           description?: string
           created_at?: string
         }
+        Relationships: []
       }
       program_pokok: {
         Row: {
@@ -71,6 +73,7 @@ export interface Database {
           name?: string
           created_at?: string
         }
+        Relationships: []
       }
       kegiatan: {
         Row: {
@@ -145,6 +148,7 @@ export interface Database {
           created_by?: string
           created_at?: string
         }
+        Relationships: []
       }
       realisasi_kegiatan: {
         Row: {
@@ -183,6 +187,7 @@ export interface Database {
           created_at?: string
           updated_at?: string | null
         }
+        Relationships: []
       }
       evidence_files: {
         Row: {
@@ -215,6 +220,7 @@ export interface Database {
           uploaded_by?: string
           uploaded_at?: string
         }
+        Relationships: []
       }
     }
     Views: Record<string, never>
