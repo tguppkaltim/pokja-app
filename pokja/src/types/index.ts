@@ -51,9 +51,19 @@ export interface Kegiatan {
 
 export type StatusRealisasi = 'terlaksana' | 'tidak_terlaksana'
 
+export interface JadwalKegiatan {
+  id: number
+  kegiatan_id: number
+  /** Tanggal sesi, format YYYY-MM-DD. */
+  tanggal: string
+  created_at: string
+}
+
 export interface RealisasiKegiatan {
   id: number
   kegiatan_id: number
+  /** Sesi terjadwal yang dilaporkan. Satu sesi maksimal satu realisasi. */
+  jadwal_id: number
   bulan: number
   tahun: number
   status: StatusRealisasi

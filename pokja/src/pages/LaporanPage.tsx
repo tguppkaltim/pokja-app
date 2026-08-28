@@ -9,9 +9,9 @@ import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableC
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
-import { fetchKegiatan, fetchRealisasi } from '@/lib/db'
-import type { Kegiatan, RealisasiKegiatan } from '@/types'
-import { BULAN_FULL, SCHED_KEYS } from '@/data/mockData'
+import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
+import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
+import { BULAN_FULL } from '@/data/mockData'
 import { toast } from 'sonner'
 
 function StatusBadge({ status }: { status: string }) {
@@ -31,12 +31,17 @@ export default function LaporanPage() {
   const [filterBulan, setFilterBulan] = useState('all')
   const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
   const [allRealisasi, setAllRealisasi] = useState<RealisasiKegiatan[]>([])
+  const [allJadwal, setAllJadwal] = useState<JadwalKegiatan[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
-    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun: parseInt(filterTahun) })])
-      .then(([k, r]) => { setAllKegiatan(k); setAllRealisasi(r) })
+    Promise.all([
+      fetchKegiatan(opts),
+      fetchRealisasi({ tahun: parseInt(filterTahun) }),
+      fetchJadwal({ tahun: parseInt(filterTahun) }),
+    ])
+      .then(([k, r, j]) => { setAllKegiatan(k); setAllRealisasi(r); setAllJadwal(j) })
       .finally(() => setIsLoading(false))
   }, [user, filterTahun])
 
@@ -59,43 +64,40 @@ export default function LaporanPage() {
 
     return relevantPokja.map(pokja => {
       const keg = kegiatan.filter(k => k.pokja_id === pokja.id)
-      let totalSched = 0, totalReal = 0
-      keg.forEach(k => {
-        SCHED_KEYS.forEach((key, idx) => {
-          if (k[key]) {
-            totalSched++
-            const r = allRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1)
-            if (r && r.status === 'terlaksana') totalReal++
-          }
-        })
-      })
+      const hitung = (daftarKegiatan: Kegiatan[]) => {
+        const idKeg = new Set(daftarKegiatan.map(k => k.id))
+        const sesi = allJadwal.filter(j => idKeg.has(j.kegiatan_id))
+        const real = sesi.filter(j =>
+          allRealisasi.some(r => r.jadwal_id === j.id && r.status === 'terlaksana')
+        ).length
+        return { sched: sesi.length, real }
+      }
+      const { sched: totalSched, real: totalReal } = hitung(keg)
       const programs = programPokok.filter(p => p.pokja_id === pokja.id)
       const programData = programs.map(prog => {
         const progKeg = keg.filter(k => k.program_pokok_id === prog.id)
-        let pSched = 0, pReal = 0
-        progKeg.forEach(k => {
-          SCHED_KEYS.forEach((key, idx) => {
-            if (k[key]) {
-              pSched++
-              const r = allRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1)
-              if (r && r.status === 'terlaksana') pReal++
-            }
-          })
-        })
+        const { sched: pSched, real: pReal } = hitung(progKeg)
         return { name: prog.name, kegiatan: progKeg.length, terlaksana: pReal, total: pSched }
       })
       return { pokja, kegiatan: keg.length, terlaksana: totalReal, total: totalSched, pct: totalSched > 0 ? Math.round((totalReal / totalSched) * 100) : 0, programs: programData }
     })
-  }, [kegiatan, allRealisasi, filterPokja, pokjaList, pokjaListFiltered, programPokok])
+  }, [kegiatan, allRealisasi, allJadwal, filterPokja, pokjaList, pokjaListFiltered, programPokok])
 
   const laporanBulanan = useMemo(() => {
     const months = filterBulan === 'all' ? Array.from({ length: 12 }, (_, i) => i + 1) : [parseInt(filterBulan)]
     return months.map(bulan => {
-      const scheduled = kegiatan.filter(k => k[SCHED_KEYS[bulan - 1]])
-      const withRealisasi = scheduled.map(k => {
-        const r = allRealisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === bulan)
+      const idKeg = new Set(kegiatan.map(k => k.id))
+      const sesiBulanIni = allJadwal.filter(j =>
+        idKeg.has(j.kegiatan_id) && parseInt(j.tanggal.slice(5, 7)) === bulan
+      )
+      // Satu baris per sesi: bulan yang sama bisa punya beberapa sesi.
+      const withRealisasi = sesiBulanIni.map(j => {
+        const k = kegiatan.find(x => x.id === j.kegiatan_id)!
+        const r = allRealisasi.find(r2 => r2.jadwal_id === j.id)
         return {
           ...k,
+          id: j.id,
+          tanggalSesi: j.tanggal,
           realisasi: r,
           pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
           progName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
@@ -103,7 +105,7 @@ export default function LaporanPage() {
       })
       return { bulan, label: BULAN_FULL[bulan - 1], items: withRealisasi }
     }).filter(m => m.items.length > 0)
-  }, [kegiatan, allRealisasi, filterBulan, pokjaList, programPokok])
+  }, [kegiatan, allRealisasi, allJadwal, filterBulan, pokjaList, programPokok])
 
   // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
   const pokjaItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaListFiltered.map(p => ({ value: String(p.id), label: p.name }))]

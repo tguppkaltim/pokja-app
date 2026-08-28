@@ -14,9 +14,10 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
-import { fetchKegiatan, deleteKegiatan } from '@/lib/db'
-import type { Kegiatan } from '@/types'
-import { BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
+import { fetchKegiatan, deleteKegiatan, fetchJadwal } from '@/lib/db'
+import type { Kegiatan, JadwalKegiatan } from '@/types'
+
+import { formatTanggalPendek } from '@/lib/utils'
 import { toast } from 'sonner'
 
 function formatRupiah(n: number) {
@@ -33,11 +34,14 @@ export default function KegiatanListPage() {
   )
   const [filterTahun, setFilterTahun] = useState(String(new Date().getFullYear()))
   const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
+  const [allJadwal, setAllJadwal] = useState<JadwalKegiatan[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
-    fetchKegiatan(opts).then(setAllKegiatan).finally(() => setIsLoading(false))
+    Promise.all([fetchKegiatan(opts), fetchJadwal({})])
+      .then(([k, j]) => { setAllKegiatan(k); setAllJadwal(j) })
+      .finally(() => setIsLoading(false))
   }, [user])
 
   const pokjaForFilter = user?.role === 'operator' && user.pokja_id
@@ -56,9 +60,9 @@ export default function KegiatanListPage() {
         ...k,
         pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
         programName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
-        jadwal: SCHED_KEYS.map((key, idx) => k[key] ? BULAN_LABELS[idx] : null).filter(Boolean).join(', '),
+        jadwal: allJadwal.filter(j => j.kegiatan_id === k.id).map(j => formatTanggalPendek(j.tanggal)).join(', '),
       }))
-  }, [allKegiatan, filterPokja, filterTahun, search, pokjaList, programPokok])
+  }, [allKegiatan, allJadwal, filterPokja, filterTahun, search, pokjaList, programPokok])
 
   // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
   const pokjaItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]

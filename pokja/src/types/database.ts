@@ -150,10 +150,32 @@ export interface Database {
         }
         Relationships: []
       }
+      jadwal_kegiatan: {
+        Row: {
+          id: number
+          kegiatan_id: number
+          tanggal: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          kegiatan_id: number
+          tanggal: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          kegiatan_id?: number
+          tanggal?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       realisasi_kegiatan: {
         Row: {
           id: number
           kegiatan_id: number
+          jadwal_id: number
           bulan: number
           tahun: number
           status: 'terlaksana' | 'tidak_terlaksana'
@@ -167,6 +189,7 @@ export interface Database {
         Insert: {
           id?: number
           kegiatan_id: number
+          jadwal_id: number
           bulan: number
           tahun: number
           status: 'terlaksana' | 'tidak_terlaksana'
@@ -180,6 +203,7 @@ export interface Database {
         Update: {
           id?: number
           kegiatan_id?: number
+          jadwal_id?: number
           bulan?: number
           tahun?: number
           status?: 'terlaksana' | 'tidak_terlaksana'

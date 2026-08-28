@@ -5,12 +5,12 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
+import { cn, formatTanggalPanjang } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
-import { fetchKegiatanById, fetchRealisasi, fetchEvidence } from '@/lib/db'
-import type { Kegiatan, RealisasiKegiatan, EvidenceFile } from '@/types'
-import { BULAN_FULL, BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
+import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal } from '@/lib/db'
+import type { Kegiatan, RealisasiKegiatan, EvidenceFile, JadwalKegiatan } from '@/types'
+import { BULAN_FULL } from '@/data/mockData'
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -29,6 +29,7 @@ export default function KegiatanDetailPage() {
   const { pokja: pokjaList, programPokok } = useData()
   const [kegiatan, setKegiatan] = useState<Kegiatan | null>(null)
   const [realisasiList, setRealisasiList] = useState<RealisasiKegiatan[]>([])
+  const [jadwalList, setJadwalList] = useState<JadwalKegiatan[]>([])
   const [evidenceMap, setEvidenceMap] = useState<Record<number, EvidenceFile[]>>({})
   const [isLoading, setIsLoading] = useState(true)
 
@@ -38,8 +39,10 @@ export default function KegiatanDetailPage() {
     Promise.all([
       fetchKegiatanById(kegId),
       fetchRealisasi({ kegiatanId: kegId }),
-    ]).then(async ([k, realisasi]) => {
+      fetchJadwal({ kegiatanId: kegId }),
+    ]).then(async ([k, realisasi, jadwal]) => {
       setKegiatan(k)
+      setJadwalList(jadwal)
       setRealisasiList(realisasi.sort((a, b) => a.bulan - b.bulan))
       const evMap: Record<number, EvidenceFile[]> = {}
       await Promise.all(realisasi.map(async r => {
@@ -69,7 +72,6 @@ export default function KegiatanDetailPage() {
     .reduce((sum, r) => sum + r.anggaran_aktual, 0)
   // null bila kegiatan tidak punya rencana anggaran — serapannya tak terdefinisi.
   const pctSerapan = kegiatan.anggaran > 0 ? Math.round((anggaranAktual / kegiatan.anggaran) * 100) : null
-  const jadwal = SCHED_KEYS.map((key, idx) => kegiatan[key] ? idx + 1 : null).filter(Boolean) as number[]
   const canEdit = user?.role === 'super_admin' || (user?.role === 'operator' && user.pokja_id === kegiatan.pokja_id)
 
   return (
@@ -129,11 +131,15 @@ export default function KegiatanDetailPage() {
               <p className="text-sm font-medium text-gray-700">Jadwal Pelaksanaan</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {BULAN_LABELS.map((b, idx) => {
-                const isScheduled = jadwal.includes(idx + 1)
+              {jadwalList.length === 0 && <span className="text-sm text-gray-400">Belum ada jadwal.</span>}
+              {jadwalList.map(j => {
+                const sudah = realisasiList.some(r => r.jadwal_id === j.id)
                 return (
-                  <span key={idx} className={`text-xs px-2.5 py-1 rounded-full font-medium ${isScheduled ? 'bg-[#1B6B35] text-white' : 'bg-gray-100 text-gray-400'}`}>
-                    {b}
+                  <span
+                    key={j.id}
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${sudah ? 'bg-[#1B6B35] text-white' : 'bg-gray-100 text-gray-500'}`}
+                  >
+                    {formatTanggalPanjang(j.tanggal)}
                   </span>
                 )
               })}

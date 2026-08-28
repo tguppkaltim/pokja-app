@@ -9,14 +9,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { MonthYearPicker, type MonthYear } from '@/components/ui/month-year-picker'
+import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
-import { fetchKegiatanById, createKegiatan, updateKegiatan } from '@/lib/db'
-import { SCHED_KEYS } from '@/data/mockData'
+import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan } from '@/lib/db'
+import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { toast } from 'sonner'
 
-const BULAN_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 const SCHED_MONTH_MAP: Record<string, number> = {
   sched_jan: 1, sched_feb: 2, sched_mar: 3, sched_apr: 4,
@@ -31,18 +30,17 @@ const emptyForm = {
   sasaran: '',
   pelaksana: '',
   anggaran: '',
-  jadwal: [] as MonthYear[],
+  jadwal: [] as string[], // YYYY-MM-DD
 }
 
-function compareMonthYear(a: MonthYear, b: MonthYear) {
-  return a.year !== b.year ? a.year - b.year : a.month - b.month
-}
-
-function jadwalToSchedFields(jadwal: MonthYear[]): Record<string, boolean> {
+// Kolom sched_* belum di-drop dan masih dibaca sebagian kode, jadi tetap
+// ditulis selaras dengan daftar tanggal selama masa transisi.
+function jadwalToSchedFields(jadwal: string[]): Record<string, boolean> {
   const fields: Record<string, boolean> = {}
   for (const key of Object.keys(SCHED_MONTH_MAP)) fields[key] = false
-  for (const my of jadwal) {
-    const key = Object.keys(SCHED_MONTH_MAP).find(k => SCHED_MONTH_MAP[k] === my.month)
+  for (const tanggal of jadwal) {
+    const bulan = parseInt(tanggal.slice(5, 7))
+    const key = Object.keys(SCHED_MONTH_MAP).find(k => SCHED_MONTH_MAP[k] === bulan)
     if (key) fields[key] = true
   }
   return fields
@@ -55,17 +53,18 @@ export default function KegiatanFormPage() {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const [form, setForm] = useState({ ...emptyForm })
-  const [pickerValue, setPickerValue] = useState<MonthYear | undefined>(undefined)
+  const [pickerValue, setPickerValue] = useState<Date | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(isEdit)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (isEdit && id) {
-      fetchKegiatanById(parseInt(id)).then(existing => {
+      Promise.all([
+        fetchKegiatanById(parseInt(id)),
+        fetchJadwal({ kegiatanId: parseInt(id) }),
+      ]).then(([existing, jadwalRows]) => {
         if (existing) {
-          const jadwal: MonthYear[] = SCHED_KEYS
-            .map((key, idx) => existing[key] ? { month: idx + 1, year: existing.tahun } : null)
-            .filter(Boolean) as MonthYear[]
+          const jadwal = jadwalRows.map(j => j.tanggal)
           setForm({
             pokja_id: String(existing.pokja_id),
             program_pokok_id: String(existing.program_pokok_id),
@@ -92,16 +91,20 @@ export default function KegiatanFormPage() {
   const pokjaItems = pokjaOptions.map(p => ({ value: String(p.id), label: p.name }))
   const programItems = filteredProgram.map(p => ({ value: String(p.id), label: p.name }))
 
-  function addJadwal(my: MonthYear | undefined) {
-    if (!my) return
-    const exists = form.jadwal.some(j => j.month === my.month && j.year === my.year)
-    if (exists) { toast.info(`${BULAN_FULL[my.month - 1]} ${my.year} sudah ada dalam jadwal.`); setPickerValue(undefined); return }
-    setForm(prev => ({ ...prev, jadwal: [...prev.jadwal, my].sort(compareMonthYear) }))
+  function addJadwal(d: Date | undefined) {
+    if (!d) return
+    const tanggal = toTanggalLokal(d)
+    if (form.jadwal.includes(tanggal)) {
+      toast.info(`${formatTanggalPanjang(tanggal)} sudah ada dalam jadwal.`)
+      setPickerValue(undefined)
+      return
+    }
+    setForm(prev => ({ ...prev, jadwal: [...prev.jadwal, tanggal].sort() }))
     setPickerValue(undefined)
   }
 
-  function removeJadwal(my: MonthYear) {
-    setForm(prev => ({ ...prev, jadwal: prev.jadwal.filter(j => !(j.month === my.month && j.year === my.year)) }))
+  function removeJadwal(tanggal: string) {
+    setForm(prev => ({ ...prev, jadwal: prev.jadwal.filter(t => t !== tanggal) }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -116,7 +119,7 @@ export default function KegiatanFormPage() {
     }
     if (!user) return
 
-    const tahun = form.jadwal[0].year
+    const tahun = parseInt(form.jadwal[0].slice(0, 4))
     const schedFields = jadwalToSchedFields(form.jadwal)
 
     setIsSaving(true)
@@ -135,14 +138,18 @@ export default function KegiatanFormPage() {
 
       if (isEdit && id) {
         await updateKegiatan(parseInt(id), payload)
+        await setJadwalKegiatan(parseInt(id), form.jadwal)
         toast.success('Kegiatan berhasil diperbarui.')
       } else {
-        await createKegiatan(payload as Parameters<typeof createKegiatan>[0])
+        const dibuat = await createKegiatan(payload as Parameters<typeof createKegiatan>[0])
+        await setJadwalKegiatan(dibuat.id, form.jadwal)
         toast.success('Kegiatan berhasil ditambahkan.')
       }
       navigate('/kegiatan')
-    } catch {
-      toast.error('Gagal menyimpan. Coba lagi.')
+    } catch (err) {
+      // setJadwalKegiatan menolak membuang tanggal yang sudah punya realisasi;
+      // pesannya ditujukan ke pengguna, jadi jangan ditelan.
+      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan. Coba lagi.')
     } finally {
       setIsSaving(false)
     }
@@ -215,11 +222,13 @@ export default function KegiatanFormPage() {
             <div className="space-y-3">
               <div>
                 <Label>Jadwal Pelaksanaan <span className="text-red-500">*</span></Label>
-                <p className="text-xs text-gray-400 mt-0.5">Pilih bulan dan tahun ketika kegiatan akan dilaksanakan.</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Pilih tanggal pelaksanaan. Boleh lebih dari satu tanggal, termasuk dalam bulan yang sama.
+                </p>
               </div>
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
-                  <MonthYearPicker value={pickerValue} onChange={setPickerValue} placeholder="Pilih bulan & tahun..." className="border-[#d1e8d5]" minYear={2024} maxYear={2030} />
+                  <DatePicker value={pickerValue} onChange={setPickerValue} placeholder="Pilih tanggal..." className="border-[#d1e8d5]" />
                 </div>
                 <Button type="button" onClick={() => addJadwal(pickerValue)} disabled={!pickerValue} variant="outline" className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC] shrink-0">
                   <Plus className="w-4 h-4 mr-1" /> Tambah
@@ -227,13 +236,13 @@ export default function KegiatanFormPage() {
               </div>
               {form.jadwal.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {form.jadwal.map(my => (
-                    <Badge key={`${my.year}-${my.month}`} className="gap-1.5 rounded-full bg-[#1B6B35] pl-3 pr-1.5 py-1 text-sm text-white [a&]:hover:bg-[#1B6B35]">
-                      <span>{BULAN_FULL[my.month - 1]} {my.year}</span>
+                  {form.jadwal.map(tanggal => (
+                    <Badge key={tanggal} className="gap-1.5 rounded-full bg-[#1B6B35] pl-3 pr-1.5 py-1 text-sm text-white [a&]:hover:bg-[#1B6B35]">
+                      <span>{formatTanggalPanjang(tanggal)}</span>
                       <button
                         type="button"
-                        aria-label={`Hapus jadwal ${BULAN_FULL[my.month - 1]} ${my.year}`}
-                        onClick={() => removeJadwal(my)}
+                        aria-label={`Hapus jadwal ${formatTanggalPanjang(tanggal)}`}
+                        onClick={() => removeJadwal(tanggal)}
                         className="rounded-full p-0.5 transition-colors hover:bg-white/20"
                       >
                         <X className="w-3 h-3" />
@@ -243,7 +252,7 @@ export default function KegiatanFormPage() {
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-[#d1e8d5] rounded-lg py-4 text-center text-sm text-gray-400">
-                  Belum ada jadwal. Pilih bulan & tahun lalu klik Tambah.
+                  Belum ada jadwal. Pilih tanggal lalu klik Tambah.
                 </div>
               )}
             </div>

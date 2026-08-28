@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import type { JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
 
@@ -84,6 +84,65 @@ export async function deleteKegiatan(id: number): Promise<void> {
   if (error) throw error
 }
 
+// ─── Jadwal ───────────────────────────────────────────────────────────────────
+
+export async function fetchJadwal(opts?: { kegiatanId?: number; tahun?: number }): Promise<JadwalKegiatan[]> {
+  let q = supabase.from('jadwal_kegiatan').select('*').order('tanggal')
+  if (opts?.kegiatanId) q = q.eq('kegiatan_id', opts.kegiatanId)
+  if (opts?.tahun) {
+    q = q.gte('tanggal', `${opts.tahun}-01-01`).lte('tanggal', `${opts.tahun}-12-31`)
+  }
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Menyelaraskan jadwal sebuah kegiatan dengan daftar tanggal yang diberikan.
+ *
+ * Menolak membuang tanggal yang sudah punya realisasi. `realisasi_kegiatan`
+ * merujuk jadwal dengan `on delete cascade`, jadi menghapus barisnya di sini
+ * akan ikut menghapus realisasinya tanpa peringatan — kehilangan data karena
+ * sekadar menyunting rencana. Pemanggil menangkap Error ini dan menampilkannya.
+ */
+export async function setJadwalKegiatan(kegiatanId: number, tanggalBaru: string[]): Promise<void> {
+  const sekarang = await fetchJadwal({ kegiatanId })
+  const diinginkan = new Set(tanggalBaru)
+
+  const akanDihapus = sekarang.filter(j => !diinginkan.has(j.tanggal))
+  if (akanDihapus.length > 0) {
+    const { data: terpakai, error: errCek } = await supabase
+      .from('realisasi_kegiatan')
+      .select('jadwal_id')
+      .in('jadwal_id', akanDihapus.map(j => j.id))
+    if (errCek) throw errCek
+
+    if (terpakai && terpakai.length > 0) {
+      const idTerpakai = new Set(terpakai.map(r => r.jadwal_id))
+      const tanggalTerkunci = akanDihapus.filter(j => idTerpakai.has(j.id)).map(j => j.tanggal)
+      throw new Error(
+        `Tanggal ${tanggalTerkunci.join(', ')} sudah punya realisasi dan tidak bisa dihapus. ` +
+        'Hapus realisasinya lebih dulu bila memang perlu diubah.'
+      )
+    }
+
+    const { error } = await supabase
+      .from('jadwal_kegiatan')
+      .delete()
+      .in('id', akanDihapus.map(j => j.id))
+    if (error) throw error
+  }
+
+  const sudahAda = new Set(sekarang.map(j => j.tanggal))
+  const akanDitambah = tanggalBaru.filter(t => !sudahAda.has(t))
+  if (akanDitambah.length > 0) {
+    const { error } = await supabase
+      .from('jadwal_kegiatan')
+      .insert(akanDitambah.map(tanggal => ({ kegiatan_id: kegiatanId, tanggal })))
+    if (error) throw error
+  }
+}
+
 // ─── Realisasi ────────────────────────────────────────────────────────────────
 
 export async function fetchRealisasi(opts?: { kegiatanId?: number; tahun?: number }): Promise<RealisasiKegiatan[]> {
@@ -100,6 +159,7 @@ export async function fetchRealisasi(opts?: { kegiatanId?: number; tahun?: numbe
 
 export async function upsertRealisasi(data: {
   kegiatan_id: number
+  jadwal_id: number
   bulan: number
   tahun: number
   status: 'terlaksana' | 'tidak_terlaksana'
@@ -110,7 +170,7 @@ export async function upsertRealisasi(data: {
 }): Promise<RealisasiKegiatan> {
   const { data: result, error } = await supabase
     .from('realisasi_kegiatan')
-    .upsert({ ...data, updated_at: new Date().toISOString() }, { onConflict: 'kegiatan_id,bulan,tahun' })
+    .upsert({ ...data, updated_at: new Date().toISOString() }, { onConflict: 'jadwal_id' })
     .select()
     .single()
   if (error) throw error

@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
-import { fetchKegiatan, fetchRealisasi } from '@/lib/db'
-import type { Kegiatan, RealisasiKegiatan } from '@/types'
-import { BULAN_LABELS, SCHED_KEYS } from '@/data/mockData'
+import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
+import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
+import { BULAN_LABELS } from '@/data/mockData'
 
 const CURRENT_MONTH = new Date().getMonth() + 1
 const CURRENT_YEAR = new Date().getFullYear()
@@ -58,6 +58,7 @@ export default function DashboardPage() {
   const [filterProgram, setFilterProgram] = useState<string>('all')
   const [kegiatan, setKegiatan] = useState<Kegiatan[]>([])
   const [realisasi, setRealisasi] = useState<RealisasiKegiatan[]>([])
+  const [jadwal, setJadwal] = useState<JadwalKegiatan[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const tahun = parseInt(filterTahun)
@@ -73,8 +74,8 @@ export default function DashboardPage() {
     const opts = user?.role === 'operator' && user.pokja_id
       ? { pokjaId: user.pokja_id, tahun }
       : { tahun }
-    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun })])
-      .then(([k, r]) => { setKegiatan(k); setRealisasi(r) })
+    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun }), fetchJadwal({ tahun })])
+      .then(([k, r, j]) => { setKegiatan(k); setRealisasi(r); setJadwal(j) })
       .finally(() => setIsLoading(false))
   }, [user, tahun])
 
@@ -95,25 +96,29 @@ export default function DashboardPage() {
     return filterPokja === 'all' ? base : base.filter(p => p.id === parseInt(filterPokja))
   }, [pokjaList, user, filterPokja])
 
-  const allScheduled = useMemo(() => {
-    let scheduled = 0, terlaksana = 0, belum = 0
-    scopedKegiatan.forEach(k => {
-      SCHED_KEYS.forEach((key, idx) => {
-        const bulan = idx + 1
-        // Hanya sesi di dalam rentang bulan yang dipilih.
-        if (k[key] && bulan >= dari && bulan <= sampai) {
-          scheduled++
-          const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === bulan && r.tahun === tahun)
-          if (r) {
-            if (r.status === 'terlaksana') terlaksana++
-          } else if (bulan < batasTerlambat) {
-            belum++
-          }
-        }
-      })
+  // Sesi kini per tanggal, jadi satu bulan bisa punya beberapa sesi. Dihitung
+  // dari tabel jadwal, bukan dari kolom sched_* yang hanya satu boleh per bulan.
+  const sesiDalamLingkup = useMemo(() => {
+    const idKegiatan = new Set(scopedKegiatan.map(k => k.id))
+    return jadwal.filter(j => {
+      if (!idKegiatan.has(j.kegiatan_id)) return false
+      const bulan = parseInt(j.tanggal.slice(5, 7))
+      return bulan >= dari && bulan <= sampai
     })
-    return { scheduled, terlaksana, belum }
-  }, [scopedKegiatan, realisasi, tahun, dari, sampai, batasTerlambat])
+  }, [jadwal, scopedKegiatan, dari, sampai])
+
+  const allScheduled = useMemo(() => {
+    let terlaksana = 0, belum = 0
+    sesiDalamLingkup.forEach(j => {
+      const r = realisasi.find(r => r.jadwal_id === j.id)
+      if (r) {
+        if (r.status === 'terlaksana') terlaksana++
+      } else if (parseInt(j.tanggal.slice(5, 7)) < batasTerlambat) {
+        belum++
+      }
+    })
+    return { scheduled: sesiDalamLingkup.length, terlaksana, belum }
+  }, [sesiDalamLingkup, realisasi, batasTerlambat])
 
   const pctRealisasi = allScheduled.scheduled > 0
     ? Math.round((allScheduled.terlaksana / allScheduled.scheduled) * 100)
@@ -121,32 +126,27 @@ export default function DashboardPage() {
 
   const pokjaChartData = useMemo(() => {
     return pokjaTampil.map(pokja => {
-      const keg = scopedKegiatan.filter(k => k.pokja_id === pokja.id)
-      let sched = 0, real = 0
-      keg.forEach(k => {
-        SCHED_KEYS.forEach((key, idx) => {
-          if (k[key] && idx + 1 >= dari && idx + 1 <= sampai) {
-            sched++
-            const r = realisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === tahun)
-            if (r && r.status === 'terlaksana') real++
-          }
-        })
-      })
+      const idKeg = new Set(scopedKegiatan.filter(k => k.pokja_id === pokja.id).map(k => k.id))
+      const sesi = sesiDalamLingkup.filter(j => idKeg.has(j.kegiatan_id))
+      const real = sesi.filter(j =>
+        realisasi.some(r => r.jadwal_id === j.id && r.status === 'terlaksana')
+      ).length
+      const sched = sesi.length
       return { name: pokja.name, pct: sched > 0 ? Math.round((real / sched) * 100) : 0, terlaksana: real, total: sched }
     })
-  }, [scopedKegiatan, realisasi, pokjaTampil, tahun, dari, sampai])
+  }, [scopedKegiatan, sesiDalamLingkup, realisasi, pokjaTampil])
 
   const lineData = useMemo(() => {
     return BULAN_LABELS.slice(dari - 1, sampai).map((bulan, offset) => {
       const idx = dari - 1 + offset
       const bulanNum = idx + 1
-      const scheduledThisMonth = scopedKegiatan.filter(k => k[SCHED_KEYS[idx]]).length
-      const realizedThisMonth = realisasi.filter(
-        r => r.bulan === bulanNum && r.tahun === tahun && r.status === 'terlaksana' && scopedKegiatan.find(k => k.id === r.kegiatan_id)
+      const sesiBulanIni = sesiDalamLingkup.filter(j => parseInt(j.tanggal.slice(5, 7)) === bulanNum)
+      const realizedThisMonth = sesiBulanIni.filter(j =>
+        realisasi.some(r => r.jadwal_id === j.id && r.status === 'terlaksana')
       ).length
-      return { bulan, dijadwalkan: scheduledThisMonth, terlaksana: realizedThisMonth }
+      return { bulan, dijadwalkan: sesiBulanIni.length, terlaksana: realizedThisMonth }
     })
-  }, [scopedKegiatan, realisasi, tahun, dari, sampai])
+  }, [sesiDalamLingkup, realisasi, dari, sampai])
 
   const pieData = [
     { name: 'Terlaksana', value: allScheduled.terlaksana, color: '#1B6B35' },
@@ -174,8 +174,11 @@ export default function DashboardPage() {
     const prog = programPokok.find(p => p.id === k.program_pokok_id)
     const pokja = pokjaList.find(p => p.id === k.pokja_id)
     // Kolom status menampilkan satu bulan; pakai bulan akhir rentang sebagai acuan.
-    const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === sampai && r.tahun === tahun)
-    const scheduledThisMonth = k[SCHED_KEYS[sampai - 1]]
+    const sesiBulanAkhir = jadwal.filter(j =>
+      j.kegiatan_id === k.id && parseInt(j.tanggal.slice(5, 7)) === sampai
+    )
+    const r = realisasi.find(x => sesiBulanAkhir.some(j => j.id === x.jadwal_id))
+    const scheduledThisMonth = sesiBulanAkhir.length > 0
     return {
       ...k,
       programName: prog?.name ?? '-',

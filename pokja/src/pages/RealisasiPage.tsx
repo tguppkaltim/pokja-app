@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Save, Upload, X, FileText, ImageIcon } from 'lucide-react'
+import { Save, Upload, X, FileText, ImageIcon, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,23 +11,13 @@ import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
-import { fetchKegiatan, fetchRealisasi, upsertRealisasi, uploadEvidence } from '@/lib/db'
-import type { Kegiatan, RealisasiKegiatan } from '@/types'
-import { BULAN_FULL, SCHED_KEYS } from '@/data/mockData'
-import { cn } from '@/lib/utils'
+import { fetchKegiatan, fetchRealisasi, upsertRealisasi, uploadEvidence, fetchJadwal } from '@/lib/db'
+import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
+import { BULAN_FULL } from '@/data/mockData'
+import { cn, toTanggalLokal, dariTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const CURRENT_YEAR = new Date().getFullYear()
-
-// toISOString() mengonversi ke UTC. Di WITA (UTC+8) tanggal 1 Oktober pukul
-// 00:00 lokal menjadi 30 September UTC, sehingga tanggal tersimpan mundur satu
-// hari dan tidak cocok dengan `bulan` yang diambil dari waktu lokal.
-// Rakit tanggalnya dari komponen lokal supaya keduanya konsisten.
-function toTanggalLokal(d: Date) {
-  const bulan = String(d.getMonth() + 1).padStart(2, '0')
-  const hari = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${bulan}-${hari}`
-}
 
 const MAKS_FILE = 5
 const MAKS_UKURAN = 5 * 1024 * 1024
@@ -49,6 +39,11 @@ export default function RealisasiPage() {
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([])
   const [riwayat, setRiwayat] = useState<RealisasiKegiatan[]>([])
   const [selectedKegiatan, setSelectedKegiatan] = useState('')
+  const [jadwalList, setJadwalList] = useState<JadwalKegiatan[]>([])
+  const [selectedJadwal, setSelectedJadwal] = useState('')
+  // Berisi id realisasi saat pengguna menekan Ubah pada riwayat. Sesi yang
+  // sedang diperbaiki tetap boleh dipilih; sesi lain yang sudah terisi tidak.
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [tanggal, setTanggal] = useState<Date | undefined>(undefined)
   const [status, setStatus] = useState('')
   const [catatan, setCatatan] = useState('')
@@ -66,28 +61,42 @@ export default function RealisasiPage() {
   }, [user])
 
   useEffect(() => {
-    if (!selectedKegiatan) { setRiwayat([]); return }
-    fetchRealisasi({ kegiatanId: parseInt(selectedKegiatan), tahun: CURRENT_YEAR })
-      .then(r => setRiwayat(r.sort((a, b) => a.bulan - b.bulan)))
+    if (!selectedKegiatan) { setRiwayat([]); setJadwalList([]); return }
+    const kegiatanId = parseInt(selectedKegiatan)
+    Promise.all([
+      fetchRealisasi({ kegiatanId, tahun: CURRENT_YEAR }),
+      fetchJadwal({ kegiatanId, tahun: CURRENT_YEAR }),
+    ]).then(([r, j]) => {
+      setRiwayat(r.sort((a, b) => a.bulan - b.bulan))
+      setJadwalList(j)
+    })
   }, [selectedKegiatan])
 
-  const selectedBulan = tanggal ? tanggal.getMonth() + 1 : undefined
   const selectedKegiatanData = kegiatanList.find(k => k.id === parseInt(selectedKegiatan))
 
-  const scheduledMonths = useMemo(() => {
-    if (!selectedKegiatanData) return []
-    return SCHED_KEYS.map((key, idx) => selectedKegiatanData[key] ? idx + 1 : null).filter(Boolean) as number[]
-  }, [selectedKegiatanData])
+  // Sesi yang sudah punya realisasi. Sumber kebenarannya riwayat, bukan tebakan
+  // dari bulan, karena satu bulan kini boleh punya beberapa sesi.
+  const sesiTerpakai = useMemo(() => {
+    const peta = new Map<number, RealisasiKegiatan>()
+    for (const r of riwayat) peta.set(r.jadwal_id, r)
+    return peta
+  }, [riwayat])
 
-  const existingRealisasi = selectedBulan
-    ? riwayat.find(r => r.bulan === selectedBulan)
-    : undefined
+  const jadwalItems = useMemo(() => jadwalList.map(j => {
+    const sudah = sesiTerpakai.get(j.id)
+    return {
+      value: String(j.id),
+      label: formatTanggalPanjang(j.tanggal) + (sudah ? ' — sudah diisi' : ''),
+      // Sesi yang sedang diperbaiki lewat tombol Ubah tetap boleh dipilih.
+      terkunci: Boolean(sudah) && sudah?.id !== editingId,
+    }
+  }), [jadwalList, sesiTerpakai, editingId])
 
-  const isMonthScheduled = selectedBulan ? scheduledMonths.includes(selectedBulan) : true
+  const sesiTersedia = jadwalItems.filter(i => !i.terkunci).length
 
   // Pembanding untuk operator: porsi rencana anggaran untuk satu sesi.
-  const rencanaPerSesi = selectedKegiatanData && scheduledMonths.length > 0
-    ? Math.round(selectedKegiatanData.anggaran / scheduledMonths.length)
+  const rencanaPerSesi = selectedKegiatanData && jadwalList.length > 0
+    ? Math.round(selectedKegiatanData.anggaran / jadwalList.length)
     : null
 
   function getPokjaName(pokjaId: number) { return pokjaList.find(p => p.id === pokjaId)?.name ?? '-' }
@@ -146,10 +155,46 @@ export default function RealisasiPage() {
     tambahFile(Array.from(e.dataTransfer.files))
   }
 
+  function pilihSesi(idJadwal: string) {
+    setSelectedJadwal(idJadwal)
+    // Tanggal realisasi default mengikuti tanggal rencana; operator boleh ubah
+    // kalau pelaksanaan nyatanya meleset.
+    const j = jadwalList.find(x => x.id === parseInt(idJadwal))
+    if (j && !tanggal) setTanggal(dariTanggalLokal(j.tanggal))
+  }
+
+  function mulaiUbah(r: RealisasiKegiatan) {
+    setEditingId(r.id)
+    setSelectedJadwal(String(r.jadwal_id))
+    setStatus(r.status)
+    setCatatan(r.catatan)
+    setAnggaranAktual(String(r.anggaran_aktual))
+    setTanggal(r.tanggal_pelaksanaan ? dariTanggalLokal(r.tanggal_pelaksanaan) : undefined)
+    setFiles([])
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function batalUbah() {
+    setEditingId(null)
+    setSelectedJadwal('')
+    setStatus('')
+    setCatatan('')
+    setAnggaranAktual('')
+    setTanggal(undefined)
+    setFiles([])
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedKegiatan || !tanggal || !status) {
-      toast.error('Kegiatan, tanggal realisasi, dan status wajib diisi.')
+    if (!selectedKegiatan || !selectedJadwal || !tanggal || !status) {
+      toast.error('Kegiatan, sesi terjadwal, tanggal realisasi, dan status wajib diisi.')
+      return
+    }
+    // Penjaga terakhir di sisi klien; database tetap menolak lewat
+    // constraint unique(jadwal_id) kalau penjaga ini terlewat.
+    const sudahAda = sesiTerpakai.get(parseInt(selectedJadwal))
+    if (sudahAda && sudahAda.id !== editingId) {
+      toast.error('Sesi ini sudah punya realisasi. Pakai tombol Ubah di riwayat bila perlu diperbaiki.')
       return
     }
     if (status === 'terlaksana' && anggaranAktual.trim() === '') {
@@ -166,6 +211,7 @@ export default function RealisasiPage() {
     try {
       const saved = await upsertRealisasi({
         kegiatan_id: parseInt(selectedKegiatan),
+        jadwal_id: parseInt(selectedJadwal),
         bulan: tanggal.getMonth() + 1,
         tahun: tanggal.getFullYear(),
         status: status as 'terlaksana' | 'tidak_terlaksana',
@@ -179,7 +225,9 @@ export default function RealisasiPage() {
         await Promise.all(files.map(f => uploadEvidence(f, saved.id, user.id)))
       }
 
-      toast.success('Realisasi berhasil disimpan.')
+      toast.success(editingId ? 'Realisasi berhasil diperbarui.' : 'Realisasi berhasil disimpan.')
+      setEditingId(null)
+      setSelectedJadwal('')
       setStatus('')
       setTanggal(undefined)
       setCatatan('')
@@ -214,7 +262,7 @@ export default function RealisasiPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <Label>Kegiatan <span className="text-red-500">*</span></Label>
-                  <Select items={kegiatanItems} value={selectedKegiatan} onValueChange={v => { if (v) { setSelectedKegiatan(v); setTanggal(undefined) } }}>
+                  <Select items={kegiatanItems} value={selectedKegiatan} onValueChange={v => { if (v) { setSelectedKegiatan(v); setSelectedJadwal(''); setEditingId(null); setTanggal(undefined) } }}>
                     <SelectTrigger className="border-[#d1e8d5] w-full"><SelectValue placeholder="Pilih kegiatan..." /></SelectTrigger>
                     <SelectContent alignItemWithTrigger={false} className="w-[min(600px,90vw)]">
                       {kegiatanList.map(k => (
@@ -233,29 +281,48 @@ export default function RealisasiPage() {
                   <div className="bg-[#F6FBF7] rounded-lg p-3 text-xs text-gray-500 space-y-1 border border-[#EAF5EC]">
                     <p><span className="font-medium text-gray-600">Program:</span> {getProgramName(selectedKegiatanData.program_pokok_id)}</p>
                     <p><span className="font-medium text-gray-600">Sasaran:</span> {selectedKegiatanData.sasaran || '-'}</p>
-                    <p><span className="font-medium text-gray-600">Jadwal bulan:</span> {scheduledMonths.length > 0 ? scheduledMonths.map(m => BULAN_FULL[m - 1]).join(', ') : 'Belum ditentukan'}</p>
+                    <p><span className="font-medium text-gray-600">Sesi terjadwal:</span> {jadwalList.length > 0 ? `${jadwalList.length} sesi, ${sesiTersedia} belum diisi` : 'Belum ditentukan'}</p>
+                  </div>
+                )}
+
+                {editingId !== null && (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+                    <span>Sedang memperbaiki realisasi yang sudah tersimpan.</span>
+                    <Button type="button" variant="ghost" size="sm" onClick={batalUbah} className="text-blue-700 hover:bg-blue-100">
+                      Batal
+                    </Button>
                   </div>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label>Tanggal Realisasi <span className="text-red-500">*</span></Label>
-                  <DatePicker value={tanggal} onChange={setTanggal} placeholder="Pilih tanggal pelaksanaan..." disabled={!selectedKegiatan} className="border-[#d1e8d5]" />
-                  {tanggal && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500">
-                        Bulan realisasi: <span className="font-medium text-[#1B6B35]">{BULAN_FULL[tanggal.getMonth()]} {tanggal.getFullYear()}</span>
-                      </span>
-                      {selectedKegiatanData && !isMonthScheduled && <Badge className="bg-amber-100 text-amber-700 text-xs">Bulan tidak dijadwalkan</Badge>}
-                      {selectedKegiatanData && isMonthScheduled && <Badge className="bg-[#EAF5EC] text-[#1B6B35] text-xs">✓ Sesuai jadwal</Badge>}
-                    </div>
+                  <Label>Sesi Terjadwal <span className="text-red-500">*</span></Label>
+                  <Select items={jadwalItems} value={selectedJadwal} onValueChange={v => v && pilihSesi(v)} disabled={!selectedKegiatan}>
+                    <SelectTrigger className="border-[#d1e8d5] w-full"><SelectValue placeholder="Pilih sesi terjadwal..." /></SelectTrigger>
+                    <SelectContent>
+                      {jadwalItems.map(i => (
+                        <SelectItem key={i.value} value={i.value} disabled={i.terkunci}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedKegiatan && jadwalList.length === 0 && (
+                    <p className="text-xs text-amber-600">
+                      Kegiatan ini belum punya jadwal. Tambahkan tanggalnya lebih dulu di Rencana Kegiatan.
+                    </p>
+                  )}
+                  {selectedKegiatan && jadwalList.length > 0 && sesiTersedia === 0 && editingId === null && (
+                    <p className="text-xs text-amber-600">
+                      Semua sesi kegiatan ini sudah punya realisasi. Pakai tombol Ubah di riwayat bila perlu diperbaiki.
+                    </p>
                   )}
                 </div>
 
-                {existingRealisasi && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
-                    Data realisasi untuk bulan <strong>{tanggal ? BULAN_FULL[tanggal.getMonth()] : ''}</strong> sudah pernah diinput. Melanjutkan akan menimpa data lama.
-                  </div>
-                )}
+                <div className="space-y-1.5">
+                  <Label>Tanggal Realisasi <span className="text-red-500">*</span></Label>
+                  <DatePicker value={tanggal} onChange={setTanggal} placeholder="Pilih tanggal pelaksanaan..." disabled={!selectedJadwal} className="border-[#d1e8d5]" />
+                  <p className="text-xs text-gray-400">Tanggal pelaksanaan nyata. Boleh berbeda dari tanggal rencana.</p>
+                </div>
 
                 <div className="space-y-1.5">
                   <Label>Status Realisasi <span className="text-red-500">*</span></Label>
@@ -377,12 +444,30 @@ export default function RealisasiPage() {
               {selectedKegiatan && riwayat.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Belum ada realisasi untuk kegiatan ini.</p>}
               {riwayat.map(r => (
                 <div key={r.id} className="mb-4 last:mb-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-700">{BULAN_FULL[r.bulan - 1]} {r.tahun}</span>
-                    <StatusBadge status={r.status} />
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      {jadwalList.find(j => j.id === r.jadwal_id)
+                        ? formatTanggalPanjang(jadwalList.find(j => j.id === r.jadwal_id)!.tanggal)
+                        : `${BULAN_FULL[r.bulan - 1]} ${r.tahun}`}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <StatusBadge status={r.status} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => mulaiUbah(r)}
+                        disabled={editingId === r.id}
+                        className="text-[#1B6B35] hover:bg-[#EAF5EC]"
+                      >
+                        <Pencil className="w-3 h-3 mr-1" /> Ubah
+                      </Button>
+                    </div>
                   </div>
                   {r.tanggal_pelaksanaan && (
-                    <p className="text-xs text-gray-400">{new Date(r.tanggal_pelaksanaan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p className="text-xs text-gray-400">
+                      Dilaksanakan: {formatTanggalPanjang(r.tanggal_pelaksanaan)}
+                    </p>
                   )}
                   {r.status === 'terlaksana' && (
                     <p className="text-xs text-gray-500 mt-1">
