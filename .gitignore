@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Artefak tooling & screenshot — berisi nama/email pengguna asli,
+# jangan masuk repo publik. pokja/public/ss/ juga akan ikut ter-deploy
+# dan tersaji publik kalau di-commit.
+.playwright-mcp/
+screenshots/
+pokja/public/ss/
