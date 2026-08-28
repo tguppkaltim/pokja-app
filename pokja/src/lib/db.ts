@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import { formatTanggalPanjang } from '@/lib/utils'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,7 @@ export async function setJadwalKegiatan(kegiatanId: number, tanggalBaru: string[
       const idTerpakai = new Set(terpakai.map(r => r.jadwal_id))
       const tanggalTerkunci = akanDihapus.filter(j => idTerpakai.has(j.id)).map(j => j.tanggal)
       throw new Error(
-        `Tanggal ${tanggalTerkunci.join(', ')} sudah punya realisasi dan tidak bisa dihapus. ` +
+        `Tanggal ${tanggalTerkunci.map(formatTanggalPanjang).join(', ')} sudah punya realisasi dan tidak bisa dihapus. ` +
         'Hapus realisasinya lebih dulu bila memang perlu diubah.'
       )
     }

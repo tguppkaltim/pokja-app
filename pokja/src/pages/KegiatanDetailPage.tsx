@@ -170,10 +170,16 @@ export default function KegiatanDetailPage() {
                   <div key={r.id} className="border border-[#d1e8d5] rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-medium text-gray-800 text-sm">{BULAN_FULL[r.bulan - 1]} {r.tahun}</p>
+                        {/* Judul memakai tanggal sesi, bukan bulan: satu bulan kini
+                            bisa punya beberapa sesi dan judul bulan jadi kembar. */}
+                        <p className="font-medium text-gray-800 text-sm">
+                          Sesi {jadwalList.find(j => j.id === r.jadwal_id)
+                            ? formatTanggalPanjang(jadwalList.find(j => j.id === r.jadwal_id)!.tanggal)
+                            : `${BULAN_FULL[r.bulan - 1]} ${r.tahun}`}
+                        </p>
                         {r.tanggal_pelaksanaan && (
                           <p className="text-xs text-gray-400">
-                            Dilaksanakan: {new Date(r.tanggal_pelaksanaan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            Dilaksanakan: {formatTanggalPanjang(r.tanggal_pelaksanaan)}
                           </p>
                         )}
                       </div>
