@@ -241,33 +241,33 @@ export const mockKegiatan: Kegiatan[] = [
 
 export const mockRealisasi: RealisasiKegiatan[] = [
   // Kegiatan 1 (sched Jan, Apr, Agu)
-  { id: 1, kegiatan_id: 1, bulan: 1, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-01-20', catatan: 'Kegiatan berjalan lancar dihadiri 45 kader', created_by: 'user-op-1', created_at: '2026-01-21T00:00:00Z', updated_at: null },
-  { id: 2, kegiatan_id: 1, bulan: 4, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-04-15', catatan: 'Kegiatan terlaksana, dihadiri 30 peserta dari target 50', created_by: 'user-op-1', created_at: '2026-04-16T00:00:00Z', updated_at: null },
+  { id: 1, kegiatan_id: 1, bulan: 1, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-01-20', catatan: 'Kegiatan berjalan lancar dihadiri 45 kader', anggaran_aktual: 4550000, created_by: 'user-op-1', created_at: '2026-01-21T00:00:00Z', updated_at: null },
+  { id: 2, kegiatan_id: 1, bulan: 4, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-04-15', catatan: 'Kegiatan terlaksana, dihadiri 30 peserta dari target 50', anggaran_aktual: 4700000, created_by: 'user-op-1', created_at: '2026-04-16T00:00:00Z', updated_at: null },
   // Kegiatan 2 (sched Feb, Mei, Sep)
-  { id: 3, kegiatan_id: 2, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-14', catatan: 'Sosialisasi berjalan sukses', created_by: 'user-op-1', created_at: '2026-02-15T00:00:00Z', updated_at: null },
-  { id: 4, kegiatan_id: 2, bulan: 5, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-05-10', catatan: 'Antusias peserta sangat tinggi', created_by: 'user-op-1', created_at: '2026-05-11T00:00:00Z', updated_at: null },
+  { id: 3, kegiatan_id: 2, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-14', catatan: 'Sosialisasi berjalan sukses', anggaran_aktual: 2587000, created_by: 'user-op-1', created_at: '2026-02-15T00:00:00Z', updated_at: null },
+  { id: 4, kegiatan_id: 2, bulan: 5, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-05-10', catatan: 'Antusias peserta sangat tinggi', anggaran_aktual: 2667000, created_by: 'user-op-1', created_at: '2026-05-11T00:00:00Z', updated_at: null },
   // Kegiatan 3 (sched Mar, Jun, Okt)
-  { id: 5, kegiatan_id: 3, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-22', catatan: '200 warga berpartisipasi', created_by: 'user-op-1', created_at: '2026-03-23T00:00:00Z', updated_at: null },
+  { id: 5, kegiatan_id: 3, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-22', catatan: '200 warga berpartisipasi', anggaran_aktual: 1467000, created_by: 'user-op-1', created_at: '2026-03-23T00:00:00Z', updated_at: null },
   // Kegiatan 4 (sched Feb, Jun, Nov)
-  { id: 6, kegiatan_id: 4, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-20', catatan: 'Monitoring 52 lembaga PAUD', created_by: 'user-op-2', created_at: '2026-02-21T00:00:00Z', updated_at: null },
+  { id: 6, kegiatan_id: 4, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-20', catatan: 'Monitoring 52 lembaga PAUD', anggaran_aktual: 7583000, created_by: 'user-op-2', created_at: '2026-02-21T00:00:00Z', updated_at: null },
   // Kegiatan 5 (sched Mar, Jul, Okt)
-  { id: 7, kegiatan_id: 5, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-18', catatan: 'Workshop terlaksana, dihadiri 150 dari 200 target', created_by: 'user-op-2', created_at: '2026-03-19T00:00:00Z', updated_at: null },
+  { id: 7, kegiatan_id: 5, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-18', catatan: 'Workshop terlaksana, dihadiri 150 dari 200 target', anggaran_aktual: 3760000, created_by: 'user-op-2', created_at: '2026-03-19T00:00:00Z', updated_at: null },
   // Kegiatan 6 (sched Jan, Apr, Jul, Des)
-  { id: 8, kegiatan_id: 6, bulan: 1, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-01-25', catatan: 'Pembukaan pojok baca di 3 desa', created_by: 'user-op-2', created_at: '2026-01-26T00:00:00Z', updated_at: null },
-  { id: 9, kegiatan_id: 6, bulan: 4, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-04-10', catatan: 'Penambahan 5 desa baru', created_by: 'user-op-2', created_at: '2026-04-11T00:00:00Z', updated_at: null },
+  { id: 8, kegiatan_id: 6, bulan: 1, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-01-25', catatan: 'Pembukaan pojok baca di 3 desa', anggaran_aktual: 4365000, created_by: 'user-op-2', created_at: '2026-01-26T00:00:00Z', updated_at: null },
+  { id: 9, kegiatan_id: 6, bulan: 4, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-04-10', catatan: 'Penambahan 5 desa baru', anggaran_aktual: 4500000, created_by: 'user-op-2', created_at: '2026-04-11T00:00:00Z', updated_at: null },
   // Kegiatan 7 (sched Feb, Mei, Agu, Nov)
-  { id: 10, kegiatan_id: 7, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-28', catatan: 'Pelatihan masak pangan lokal: singkong, ubi, sagu', created_by: 'user-op-3', created_at: '2026-03-01T00:00:00Z', updated_at: null },
-  { id: 11, kegiatan_id: 7, bulan: 5, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-05-22', catatan: 'Sesi ke-2 fokus pengolahan ikan air tawar', created_by: 'user-op-3', created_at: '2026-05-23T00:00:00Z', updated_at: null },
+  { id: 10, kegiatan_id: 7, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-28', catatan: 'Pelatihan masak pangan lokal: singkong, ubi, sagu', anggaran_aktual: 4400000, created_by: 'user-op-3', created_at: '2026-03-01T00:00:00Z', updated_at: null },
+  { id: 11, kegiatan_id: 7, bulan: 5, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-05-22', catatan: 'Sesi ke-2 fokus pengolahan ikan air tawar', anggaran_aktual: 4550000, created_by: 'user-op-3', created_at: '2026-05-23T00:00:00Z', updated_at: null },
   // Kegiatan 9 (sched Mar, Jun, Sep)
-  { id: 12, kegiatan_id: 9, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-15', catatan: 'Pelatihan diikuti 155 ibu rumah tangga', created_by: 'user-op-3', created_at: '2026-03-16T00:00:00Z', updated_at: null },
+  { id: 12, kegiatan_id: 9, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-15', catatan: 'Pelatihan diikuti 155 ibu rumah tangga', anggaran_aktual: 3133000, created_by: 'user-op-3', created_at: '2026-03-16T00:00:00Z', updated_at: null },
   // Kegiatan 10 (sched Jan, Mar, Mei, Jul, Sep, Nov)
-  { id: 13, kegiatan_id: 10, bulan: 1, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-01-18', catatan: 'Penyuluhan di 5 Puskesmas', created_by: 'user-op-4', created_at: '2026-01-19T00:00:00Z', updated_at: null },
-  { id: 14, kegiatan_id: 10, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-20', catatan: 'Penyuluhan di 7 Puskesmas, total 520 peserta', created_by: 'user-op-4', created_at: '2026-03-21T00:00:00Z', updated_at: null },
-  { id: 15, kegiatan_id: 10, bulan: 5, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-05-15', catatan: 'Penyuluhan terlaksana di 4 Puskesmas', created_by: 'user-op-4', created_at: '2026-05-16T00:00:00Z', updated_at: null },
+  { id: 13, kegiatan_id: 10, bulan: 1, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-01-18', catatan: 'Penyuluhan di 5 Puskesmas', anggaran_aktual: 5658000, created_by: 'user-op-4', created_at: '2026-01-19T00:00:00Z', updated_at: null },
+  { id: 14, kegiatan_id: 10, bulan: 3, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-03-20', catatan: 'Penyuluhan di 7 Puskesmas, total 520 peserta', anggaran_aktual: 5833000, created_by: 'user-op-4', created_at: '2026-03-21T00:00:00Z', updated_at: null },
+  { id: 15, kegiatan_id: 10, bulan: 5, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-05-15', catatan: 'Penyuluhan terlaksana di 4 Puskesmas', anggaran_aktual: 5133000, created_by: 'user-op-4', created_at: '2026-05-16T00:00:00Z', updated_at: null },
   // Kegiatan 11 (sched Feb, Jun, Des)
-  { id: 16, kegiatan_id: 11, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-22', catatan: 'Pemeriksaan 320 kader, semua sehat', created_by: 'user-op-4', created_at: '2026-02-23T00:00:00Z', updated_at: null },
+  { id: 16, kegiatan_id: 11, bulan: 2, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-02-22', catatan: 'Pemeriksaan 320 kader, semua sehat', anggaran_aktual: 6673000, created_by: 'user-op-4', created_at: '2026-02-23T00:00:00Z', updated_at: null },
   // Kegiatan 12 (sched Apr, Agu)
-  { id: 17, kegiatan_id: 12, bulan: 4, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-04-22', catatan: 'Gerakan dimulai di 10 desa percontohan', created_by: 'user-op-4', created_at: '2026-04-23T00:00:00Z', updated_at: null },
+  { id: 17, kegiatan_id: 12, bulan: 4, tahun: 2026, status: 'terlaksana', tanggal_pelaksanaan: '2026-04-22', catatan: 'Gerakan dimulai di 10 desa percontohan', anggaran_aktual: 8460000, created_by: 'user-op-4', created_at: '2026-04-23T00:00:00Z', updated_at: null },
 ]
 
 export const mockEvidence: EvidenceFile[] = [

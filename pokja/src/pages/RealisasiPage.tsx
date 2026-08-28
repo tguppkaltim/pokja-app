@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Save, Upload, X, FileText, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -13,9 +14,28 @@ import { useData } from '@/contexts/DataContext'
 import { fetchKegiatan, fetchRealisasi, upsertRealisasi, uploadEvidence } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan } from '@/types'
 import { BULAN_FULL, SCHED_KEYS } from '@/data/mockData'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const CURRENT_YEAR = new Date().getFullYear()
+
+// toISOString() mengonversi ke UTC. Di WITA (UTC+8) tanggal 1 Oktober pukul
+// 00:00 lokal menjadi 30 September UTC, sehingga tanggal tersimpan mundur satu
+// hari dan tidak cocok dengan `bulan` yang diambil dari waktu lokal.
+// Rakit tanggalnya dari komponen lokal supaya keduanya konsisten.
+function toTanggalLokal(d: Date) {
+  const bulan = String(d.getMonth() + 1).padStart(2, '0')
+  const hari = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${bulan}-${hari}`
+}
+
+const MAKS_FILE = 5
+const MAKS_UKURAN = 5 * 1024 * 1024
+const TIPE_DIIZINKAN = ['.jpg', '.jpeg', '.png', '.webp', '.pdf']
+
+function formatRupiah(n: number) {
+  return `Rp ${n.toLocaleString('id-ID')}`
+}
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'terlaksana') return <Badge className="bg-green-100 text-green-700 border-green-200">✓ Terlaksana</Badge>
@@ -32,6 +52,8 @@ export default function RealisasiPage() {
   const [tanggal, setTanggal] = useState<Date | undefined>(undefined)
   const [status, setStatus] = useState('')
   const [catatan, setCatatan] = useState('')
+  const [anggaranAktual, setAnggaranAktual] = useState('')
+  const [sedangSeret, setSedangSeret] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
@@ -63,22 +85,80 @@ export default function RealisasiPage() {
 
   const isMonthScheduled = selectedBulan ? scheduledMonths.includes(selectedBulan) : true
 
+  // Pembanding untuk operator: porsi rencana anggaran untuk satu sesi.
+  const rencanaPerSesi = selectedKegiatanData && scheduledMonths.length > 0
+    ? Math.round(selectedKegiatanData.anggaran / scheduledMonths.length)
+    : null
+
   function getPokjaName(pokjaId: number) { return pokjaList.find(p => p.id === pokjaId)?.name ?? '-' }
   function getProgramName(progId: number) { return programPokok.find(p => p.id === progId)?.name ?? '-' }
 
+  // Item punya isi JSX; `items` memberi Base UI label teks untuk ditampilkan di trigger.
+  const kegiatanItems = kegiatanList.map(k => ({ value: String(k.id), label: k.nama_kegiatan }))
+
+  // Menerima sebagian: file yang lolos tetap masuk, yang bermasalah dilewati
+  // dan dilaporkan. Versi lama membuang seluruh batch begitu ada satu yang
+  // melanggar, sehingga memilih 6 file sekaligus berujung nol file masuk.
+  //
+  // Seluruh perhitungan dilakukan di luar setFiles. Updater harus murni:
+  // StrictMode memanggilnya dua kali di mode dev, jadi efek samping di
+  // dalamnya (toast, push ke array) akan terjadi dobel.
+  function tambahFile(masuk: File[]) {
+    if (masuk.length === 0) return
+
+    const diterima: File[] = []
+    const ditolakTipe: string[] = []
+    const ditolakUkuran: string[] = []
+    const duplikat: string[] = []
+    let kelebihan = 0
+    let sisaSlot = MAKS_FILE - files.length
+
+    for (const f of masuk) {
+      const ekstensi = f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
+      if (!TIPE_DIIZINKAN.includes(ekstensi)) { ditolakTipe.push(f.name); continue }
+      if (f.size > MAKS_UKURAN) { ditolakUkuran.push(f.name); continue }
+      if ([...files, ...diterima].some(x => x.name === f.name && x.size === f.size)) {
+        duplikat.push(f.name); continue
+      }
+      if (sisaSlot <= 0) { kelebihan++; continue }
+      diterima.push(f)
+      sisaSlot--
+    }
+
+    if (diterima.length > 0) {
+      setFiles(prev => [...prev, ...diterima])
+      toast.success(`${diterima.length} file ditambahkan.`)
+    }
+    if (ditolakTipe.length > 0) toast.error(`Format tidak didukung: ${ditolakTipe.join(', ')}`)
+    if (ditolakUkuran.length > 0) toast.error(`Melebihi 5 MB: ${ditolakUkuran.join(', ')}`)
+    if (duplikat.length > 0) toast.info(`Sudah ada di daftar: ${duplikat.join(', ')}`)
+    if (kelebihan > 0) toast.error(`${kelebihan} file tidak masuk. Maksimum ${MAKS_FILE} file per realisasi.`)
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(e.target.files ?? [])
-    if (files.length + selected.length > 5) { toast.error('Maksimum 5 file per input realisasi.'); return }
-    const tooLarge = selected.filter(f => f.size > 5 * 1024 * 1024)
-    if (tooLarge.length > 0) { toast.error('Ukuran file maksimum 5 MB.'); return }
-    setFiles(prev => [...prev, ...selected])
-    e.target.value = ''
+    tambahFile(Array.from(e.target.files ?? []))
+    e.target.value = '' // supaya memilih file yang sama lagi tetap memicu change
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setSedangSeret(false)
+    tambahFile(Array.from(e.dataTransfer.files))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedKegiatan || !tanggal || !status) {
       toast.error('Kegiatan, tanggal realisasi, dan status wajib diisi.')
+      return
+    }
+    if (status === 'terlaksana' && anggaranAktual.trim() === '') {
+      toast.error('Anggaran aktual wajib diisi untuk kegiatan yang terlaksana. Isi 0 bila tanpa biaya.')
+      return
+    }
+    const nominalAktual = status === 'terlaksana' ? Number(anggaranAktual) : 0
+    if (!Number.isFinite(nominalAktual) || nominalAktual < 0) {
+      toast.error('Anggaran aktual harus berupa angka dan tidak boleh negatif.')
       return
     }
     if (!user) return
@@ -89,8 +169,9 @@ export default function RealisasiPage() {
         bulan: tanggal.getMonth() + 1,
         tahun: tanggal.getFullYear(),
         status: status as 'terlaksana' | 'tidak_terlaksana',
-        tanggal_pelaksanaan: tanggal.toISOString().split('T')[0],
+        tanggal_pelaksanaan: toTanggalLokal(tanggal),
         catatan,
+        anggaran_aktual: nominalAktual,
         created_by: user.id,
       })
 
@@ -102,6 +183,7 @@ export default function RealisasiPage() {
       setStatus('')
       setTanggal(undefined)
       setCatatan('')
+      setAnggaranAktual('')
       setFiles([])
       const updated = await fetchRealisasi({ kegiatanId: parseInt(selectedKegiatan), tahun: CURRENT_YEAR })
       setRiwayat(updated.sort((a, b) => a.bulan - b.bulan))
@@ -132,7 +214,7 @@ export default function RealisasiPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <Label>Kegiatan <span className="text-red-500">*</span></Label>
-                  <Select value={selectedKegiatan} onValueChange={v => { if (v) { setSelectedKegiatan(v); setTanggal(undefined) } }}>
+                  <Select items={kegiatanItems} value={selectedKegiatan} onValueChange={v => { if (v) { setSelectedKegiatan(v); setTanggal(undefined) } }}>
                     <SelectTrigger className="border-[#d1e8d5] w-full"><SelectValue placeholder="Pilih kegiatan..." /></SelectTrigger>
                     <SelectContent alignItemWithTrigger={false} className="w-[min(600px,90vw)]">
                       {kegiatanList.map(k => (
@@ -182,13 +264,40 @@ export default function RealisasiPage() {
                       { value: 'terlaksana', label: '✓ Terlaksana', base: 'border-green-300 text-green-700', active: 'bg-green-600 text-white border-green-600' },
                       { value: 'tidak_terlaksana', label: '✗ Tidak Terlaksana', base: 'border-red-300 text-red-700', active: 'bg-red-600 text-white border-red-600' },
                     ].map(opt => (
-                      <button key={opt.value} type="button" onClick={() => setStatus(opt.value)}
-                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${status === opt.value ? opt.active : opt.base + ' hover:bg-gray-50'}`}>
+                      <Button
+                        key={opt.value}
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        aria-pressed={status === opt.value}
+                        onClick={() => setStatus(opt.value)}
+                        className={`px-4 ${status === opt.value ? opt.active : `${opt.base} hover:bg-gray-50`}`}
+                      >
                         {opt.label}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
+
+                {status === 'terlaksana' && (
+                  <div className="space-y-1.5">
+                    <Label>Anggaran Aktual (Rp) <span className="text-red-500">*</span></Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={anggaranAktual}
+                      onChange={e => setAnggaranAktual(e.target.value)}
+                      className="border-[#d1e8d5]"
+                    />
+                    <p className="text-xs text-gray-400">
+                      {rencanaPerSesi !== null
+                        ? `Rencana per sesi: ${formatRupiah(rencanaPerSesi)}. Isi 0 bila kegiatan tanpa biaya.`
+                        : 'Isi 0 bila kegiatan tanpa biaya.'}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <Label>Catatan Pelaksanaan</Label>
@@ -199,12 +308,35 @@ export default function RealisasiPage() {
 
                 <div className="space-y-2">
                   <Label>Upload Bukti Kegiatan</Label>
-                  <p className="text-xs text-gray-400">Format: JPG, PNG, WEBP, PDF. Maks 5 MB/file. Maks 5 file.</p>
-                  <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-[#52B788] rounded-xl cursor-pointer hover:bg-[#EAF5EC]/50 transition-colors">
+                  <p className="text-xs text-gray-400">
+                    Format: JPG, PNG, WEBP, PDF. Maks 5 MB/file. Maks {MAKS_FILE} file — bisa dipilih sekaligus.
+                  </p>
+                  <label
+                    onDragOver={e => { e.preventDefault(); setSedangSeret(true) }}
+                    onDragLeave={() => setSedangSeret(false)}
+                    onDrop={handleDrop}
+                    className={cn(
+                      'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
+                      sedangSeret
+                        ? 'border-[#1B6B35] bg-[#EAF5EC]'
+                        : 'border-[#52B788] hover:bg-[#EAF5EC]/50'
+                    )}
+                  >
                     <Upload className="w-6 h-6 text-[#52B788] mb-1" />
-                    <span className="text-sm text-[#2E8B57] font-medium">Klik atau drag & drop file</span>
-                    <span className="text-xs text-gray-400 mt-0.5">JPG, PNG, PDF</span>
-                    <input type="file" className="hidden" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleFileChange} />
+                    <span className="text-sm text-[#2E8B57] font-medium">
+                      {sedangSeret ? 'Lepaskan file di sini' : 'Klik atau seret file ke sini'}
+                    </span>
+                    <span className="text-xs text-gray-400 mt-0.5">
+                      Bisa pilih beberapa file sekaligus · sisa {MAKS_FILE - files.length} slot
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept={TIPE_DIIZINKAN.join(',')}
+                      onChange={handleFileChange}
+                      disabled={files.length >= MAKS_FILE}
+                    />
                   </label>
                   {files.length > 0 && (
                     <div className="space-y-2">
@@ -213,9 +345,9 @@ export default function RealisasiPage() {
                           {f.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-[#2E8B57] shrink-0" /> : <FileText className="w-4 h-4 text-blue-500 shrink-0" />}
                           <span className="text-sm text-gray-700 flex-1 truncate">{f.name}</span>
                           <span className="text-xs text-gray-400">{(f.size / 1024).toFixed(0)} KB</span>
-                          <button type="button" onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <Button type="button" variant="ghost" size="icon-xs" aria-label={`Hapus file ${f.name}`} onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:bg-red-50 hover:text-red-500">
                             <X className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -251,6 +383,11 @@ export default function RealisasiPage() {
                   </div>
                   {r.tanggal_pelaksanaan && (
                     <p className="text-xs text-gray-400">{new Date(r.tanggal_pelaksanaan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  )}
+                  {r.status === 'terlaksana' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Anggaran aktual: <span className="font-medium text-[#1B6B35]">{formatRupiah(r.anggaran_aktual)}</span>
+                    </p>
                   )}
                   {r.catatan && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{r.catatan}</p>}
                   <Separator className="mt-3 bg-[#EAF5EC]" />

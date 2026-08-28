@@ -159,6 +159,7 @@ export interface Database {
           status: 'terlaksana' | 'tidak_terlaksana'
           tanggal_pelaksanaan: string | null
           catatan: string
+          anggaran_aktual: number
           created_by: string
           created_at: string
           updated_at: string | null
@@ -171,6 +172,7 @@ export interface Database {
           status: 'terlaksana' | 'tidak_terlaksana'
           tanggal_pelaksanaan?: string | null
           catatan?: string
+          anggaran_aktual?: number
           created_by: string
           created_at?: string
           updated_at?: string | null
@@ -183,6 +185,7 @@ export interface Database {
           status?: 'terlaksana' | 'tidak_terlaksana'
           tanggal_pelaksanaan?: string | null
           catatan?: string
+          anggaran_aktual?: number
           created_by?: string
           created_at?: string
           updated_at?: string | null

@@ -62,6 +62,13 @@ export default function KegiatanDetailPage() {
 
   const pokja = pokjaList.find(p => p.id === kegiatan.pokja_id)
   const program = programPokok.find(p => p.id === kegiatan.program_pokok_id)
+
+  // Anggaran aktual kegiatan = jumlah anggaran aktual seluruh sesi terlaksana.
+  const anggaranAktual = realisasiList
+    .filter(r => r.status === 'terlaksana')
+    .reduce((sum, r) => sum + r.anggaran_aktual, 0)
+  // null bila kegiatan tidak punya rencana anggaran — serapannya tak terdefinisi.
+  const pctSerapan = kegiatan.anggaran > 0 ? Math.round((anggaranAktual / kegiatan.anggaran) * 100) : null
   const jadwal = SCHED_KEYS.map((key, idx) => kegiatan[key] ? idx + 1 : null).filter(Boolean) as number[]
   const canEdit = user?.role === 'super_admin' || (user?.role === 'operator' && user.pokja_id === kegiatan.pokja_id)
 
@@ -102,7 +109,13 @@ export default function KegiatanDetailPage() {
             </div>
             <div className="flex items-start gap-2 text-sm">
               <DollarSign className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
-              <div><p className="text-gray-400 text-xs">Anggaran</p><p className="text-gray-700 font-medium">{formatRupiah(kegiatan.anggaran)}</p></div>
+              <div>
+                <p className="text-gray-400 text-xs">Anggaran</p>
+                <p className="text-gray-700 font-medium">{formatRupiah(kegiatan.anggaran)} <span className="text-xs font-normal text-gray-400">rencana</span></p>
+                <p className="text-[#1B6B35] font-medium">
+                  {formatRupiah(anggaranAktual)} <span className="text-xs font-normal text-gray-400">aktual &middot; serapan {pctSerapan === null ? '—' : `${pctSerapan}%`}</span>
+                </p>
+              </div>
             </div>
             <div className="flex items-start gap-2 text-sm">
               <FileText className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
@@ -160,6 +173,11 @@ export default function KegiatanDetailPage() {
                       </div>
                       <StatusBadge status={r.status} />
                     </div>
+                    {r.status === 'terlaksana' && (
+                      <p className="text-xs text-gray-500">
+                        Anggaran aktual: <span className="font-medium text-[#1B6B35]">{formatRupiah(r.anggaran_aktual)}</span>
+                      </p>
+                    )}
                     {r.catatan && <p className="text-sm text-gray-600 bg-[#F6FBF7] rounded px-3 py-2">{r.catatan}</p>}
                     {evidences.length > 0 && (
                       <div className="flex flex-wrap gap-2 pt-1">

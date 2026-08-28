@@ -92,7 +92,10 @@ export async function fetchRealisasi(opts?: { kegiatanId?: number; tahun?: numbe
   if (opts?.tahun) q = q.eq('tahun', opts.tahun)
   const { data, error } = await q
   if (error) throw error
-  return data ?? []
+  // Migrasi 005 menambahkan anggaran_aktual. Kalau aplikasi dimuat sebelum
+  // migrasi itu dijalankan kolomnya belum ada, dan nilai undefined membuat
+  // penjumlahan serapan di Dashboard jadi NaN. Normalkan di titik masuk ini.
+  return (data ?? []).map(r => ({ ...r, anggaran_aktual: r.anggaran_aktual ?? 0 }))
 }
 
 export async function upsertRealisasi(data: {
@@ -102,6 +105,7 @@ export async function upsertRealisasi(data: {
   status: 'terlaksana' | 'tidak_terlaksana'
   tanggal_pelaksanaan: string | null
   catatan: string
+  anggaran_aktual: number
   created_by: string
 }): Promise<RealisasiKegiatan> {
   const { data: result, error } = await supabase

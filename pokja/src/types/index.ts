@@ -59,6 +59,8 @@ export interface RealisasiKegiatan {
   status: StatusRealisasi
   tanggal_pelaksanaan: string | null
   catatan: string
+  /** Anggaran terpakai pada sesi bulan ini. 0 bila tidak terlaksana. */
+  anggaran_aktual: number
   created_by: string
   created_at: string
   updated_at: string | null
