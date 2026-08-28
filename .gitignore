@@ -12,3 +12,7 @@ dist/
 .playwright-mcp/
 screenshots/
 pokja/public/ss/
+
+# Memuat nama & email pengguna asli — jangan masuk repo publik.
+# File tetap ada di disk untuk keperluan setup database.
+supabase/migrations/003_update_profiles.sql
