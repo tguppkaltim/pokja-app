@@ -97,15 +97,15 @@ export default function MasterPokjaPage() {
                   <p className="text-sm text-gray-500 ml-9 leading-relaxed">{p.description || '-'}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => openEdit(p)} className="h-8 w-8 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-50">
+                  <Button variant="ghost" size="icon" aria-label="Ubah pokja" onClick={() => openEdit(p)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
                     <Pencil className="w-4 h-4" />
-                  </button>
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={
-                        <button className="h-8 w-8 rounded-md flex items-center justify-center text-red-500 hover:bg-red-50">
+                        <Button variant="ghost" size="icon" aria-label="Hapus pokja" className="text-red-500 hover:bg-red-50 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       }
                     />
                     <AlertDialogContent>

@@ -27,6 +27,10 @@ export default function MasterProgramPage() {
     fetchProgramPokok().then(setPrograms).finally(() => setIsLoading(false))
   }, [])
 
+  // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
+  const pokjaItems = pokjaList.map(p => ({ value: String(p.id), label: p.name }))
+  const pokjaFilterItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaItems]
+
   const filtered = filterPokja === 'all' ? programs : programs.filter(p => p.pokja_id === parseInt(filterPokja))
 
   function openAdd() {
@@ -87,11 +91,10 @@ export default function MasterProgramPage() {
         </Button>
       </div>
 
-      <Select value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
+      <Select items={pokjaFilterItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
         <SelectTrigger className="w-44 border-[#d1e8d5]"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Semua Pokja</SelectItem>
-          {pokjaList.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+          {pokjaFilterItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
         </SelectContent>
       </Select>
 
@@ -114,14 +117,14 @@ export default function MasterProgramPage() {
                         <span className="text-sm text-gray-700">{prog.name}</span>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => openEdit(prog)} className="h-7 w-7 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-50">
+                        <Button variant="ghost" size="icon" aria-label="Ubah program pokok" onClick={() => openEdit(prog)} className="size-7 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
                           <Pencil className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger render={
-                            <button className="h-7 w-7 rounded-md flex items-center justify-center text-red-500 hover:bg-red-50">
+                            <Button variant="ghost" size="icon" aria-label="Hapus program pokok" className="size-7 text-red-500 hover:bg-red-50 hover:text-red-600">
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            </Button>
                           } />
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -153,10 +156,10 @@ export default function MasterProgramPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Pokja <span className="text-red-500">*</span></Label>
-              <Select value={form.pokja_id} onValueChange={v => v && setForm(p => ({ ...p, pokja_id: v }))}>
+              <Select items={pokjaItems} value={form.pokja_id} onValueChange={v => v && setForm(p => ({ ...p, pokja_id: v }))}>
                 <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                 <SelectContent>
-                  {pokjaList.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                  {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

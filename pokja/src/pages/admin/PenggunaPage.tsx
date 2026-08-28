@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -20,6 +21,10 @@ const ROLE_LABELS: Record<string, string> = {
   viewer: 'Viewer',
 }
 
+// Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
+const ROLE_ITEMS = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))
+const ROLE_FILTER_ITEMS = [{ value: 'all', label: 'Semua Role' }, ...ROLE_ITEMS]
+
 export default function PenggunaPage() {
   const { pokja: pokjaList } = useData()
   const [users, setUsers] = useState<User[]>([])
@@ -34,6 +39,8 @@ export default function PenggunaPage() {
   useEffect(() => {
     fetchProfiles().then(setUsers).finally(() => setIsLoading(false))
   }, [])
+
+  const pokjaItems = pokjaList.map(p => ({ value: String(p.id), label: p.name }))
 
   const filtered = users.filter(u => {
     if (filterRole !== 'all' && u.role !== filterRole) return false
@@ -112,76 +119,80 @@ export default function PenggunaPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="Cari nama atau email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 border-[#d1e8d5]" />
         </div>
-        <Select value={filterRole} onValueChange={v => v && setFilterRole(v)}>
+        <Select items={ROLE_FILTER_ITEMS} value={filterRole} onValueChange={v => v && setFilterRole(v)}>
           <SelectTrigger className="w-44 border-[#d1e8d5]"><SelectValue placeholder="Filter role" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua Role</SelectItem>
-            <SelectItem value="super_admin">Super Admin</SelectItem>
-            <SelectItem value="operator">Operator Pokja</SelectItem>
-            <SelectItem value="viewer">Viewer</SelectItem>
+            {ROLE_FILTER_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
       <Card className="border-[#d1e8d5]">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#134D26] text-white">
-                  <th className="text-left px-4 py-3 font-medium">Pengguna</th>
-                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Email</th>
-                  <th className="text-left px-4 py-3 font-medium">Role</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Pokja</th>
-                  <th className="text-center px-4 py-3 font-medium">Status</th>
-                  <th className="text-center px-4 py-3 font-medium">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((u, idx) => {
-                  const pokja = u.pokja_id ? pokjaList.find(p => p.id === u.pokja_id) : null
-                  return (
-                    <tr key={u.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#EAF5EC]/30'} ${!u.is_active ? 'opacity-60' : ''}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-[#1B6B35] text-white text-xs">{getInitials(u.full_name)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-gray-800">{u.full_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className={u.role === 'super_admin' ? 'border-purple-300 text-purple-600' : u.role === 'operator' ? 'border-[#52B788] text-[#2E8B57]' : 'border-blue-300 text-blue-600'}>
-                          {ROLE_LABELS[u.role]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{pokja?.name ?? '—'}</td>
-                      <td className="px-4 py-3 text-center">
-                        {u.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-gray-100 text-gray-500">Nonaktif</Badge>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => openEdit(u)} className="h-8 w-8 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-50">
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => resetPassword(u)} title="Reset Password" className="h-8 w-8 rounded-md flex items-center justify-center text-amber-600 hover:bg-amber-50">
-                            <KeyRound className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => toggleActive(u)} title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'} className={`h-8 w-8 rounded-md flex items-center justify-center ${u.is_active ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
-                            {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">Tidak ada pengguna ditemukan.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+                <TableHead className="text-white">Pengguna</TableHead>
+                <TableHead className="text-white hidden sm:table-cell">Email</TableHead>
+                <TableHead className="text-white">Role</TableHead>
+                <TableHead className="text-white hidden md:table-cell">Pokja</TableHead>
+                <TableHead className="text-white text-center">Status</TableHead>
+                <TableHead className="text-white text-center">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((u, idx) => {
+                const pokja = u.pokja_id ? pokjaList.find(p => p.id === u.pokja_id) : null
+                return (
+                  <TableRow key={u.id} className={`${idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/30'} ${!u.is_active ? 'opacity-60' : ''}`}>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="bg-[#1B6B35] text-white text-xs">{getInitials(u.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-gray-800">{u.full_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{u.email}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge variant="outline" className={u.role === 'super_admin' ? 'border-purple-300 text-purple-600' : u.role === 'operator' ? 'border-[#52B788] text-[#2E8B57]' : 'border-blue-300 text-blue-600'}>
+                        {ROLE_LABELS[u.role]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{pokja?.name ?? '—'}</TableCell>
+                    <TableCell className="px-4 py-3 text-center">
+                      {u.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-gray-100 text-gray-500">Nonaktif</Badge>}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="icon" aria-label="Ubah pengguna" onClick={() => openEdit(u)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" aria-label="Reset password" title="Reset Password" onClick={() => resetPassword(u)} className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
+                          <KeyRound className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={u.is_active ? 'Nonaktifkan pengguna' : 'Aktifkan pengguna'}
+                          title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                          onClick={() => toggleActive(u)}
+                          className={u.is_active ? 'text-red-500 hover:bg-red-50 hover:text-red-600' : 'text-green-600 hover:bg-green-50 hover:text-green-700'}
+                        >
+                          {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {filtered.length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={6} className="px-4 py-10 text-center text-gray-400">Tidak ada pengguna ditemukan.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -201,22 +212,20 @@ export default function PenggunaPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Role <span className="text-red-500">*</span></Label>
-              <Select value={form.role} onValueChange={v => v && setForm(p => ({ ...p, role: v, pokja_id: '' }))}>
+              <Select items={ROLE_ITEMS} value={form.role} onValueChange={v => v && setForm(p => ({ ...p, role: v, pokja_id: '' }))}>
                 <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                  <SelectItem value="operator">Operator Pokja</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  {ROLE_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             {form.role === 'operator' && (
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
-                <Select value={form.pokja_id} onValueChange={v => v && setForm(p => ({ ...p, pokja_id: v }))}>
+                <Select items={pokjaItems} value={form.pokja_id} onValueChange={v => v && setForm(p => ({ ...p, pokja_id: v }))}>
                   <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
-                    {pokjaList.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                    {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
@@ -104,6 +105,10 @@ export default function LaporanPage() {
     }).filter(m => m.items.length > 0)
   }, [kegiatan, allRealisasi, filterBulan, pokjaList, programPokok])
 
+  // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
+  const pokjaItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaListFiltered.map(p => ({ value: String(p.id), label: p.name }))]
+  const bulanItems = [{ value: 'all', label: 'Semua Bulan' }, ...BULAN_FULL.map((b, i) => ({ value: String(i + 1), label: b }))]
+
   function handleExport(type: 'pdf' | 'excel') {
     toast.success(`Laporan sedang disiapkan dalam format ${type.toUpperCase()}.`)
   }
@@ -136,11 +141,10 @@ export default function LaporanPage() {
           </SelectContent>
         </Select>
         {user?.role !== 'operator' && (
-          <Select value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
+          <Select items={pokjaItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
             <SelectTrigger className="w-40 border-[#d1e8d5]"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Pokja</SelectItem>
-              {pokjaListFiltered.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+              {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -169,48 +173,47 @@ export default function LaporanPage() {
                 <Progress value={pct} className="h-2.5 [&>div]:bg-[#1B6B35] mt-2" />
               </CardHeader>
               <CardContent>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[#EAF5EC]">
-                      <th className="text-left py-2 text-gray-500 font-medium text-xs">Program Pokok</th>
-                      <th className="text-center py-2 text-gray-500 font-medium text-xs">Kegiatan</th>
-                      <th className="text-center py-2 text-gray-500 font-medium text-xs">Terlaksana</th>
-                      <th className="text-center py-2 text-gray-500 font-medium text-xs">Total Sesi</th>
-                      <th className="text-right py-2 text-gray-500 font-medium text-xs">%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#EAF5EC] hover:bg-transparent">
+                      <TableHead className="text-gray-500 text-xs">Program Pokok</TableHead>
+                      <TableHead className="text-gray-500 text-xs text-center">Kegiatan</TableHead>
+                      <TableHead className="text-gray-500 text-xs text-center">Terlaksana</TableHead>
+                      <TableHead className="text-gray-500 text-xs text-center">Total Sesi</TableHead>
+                      <TableHead className="text-gray-500 text-xs text-right">%</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {programs.map(prog => (
-                      <tr key={prog.name} className="border-b border-[#EAF5EC]/60 last:border-0">
-                        <td className="py-2 text-gray-700">{prog.name}</td>
-                        <td className="py-2 text-center text-gray-600">{prog.kegiatan}</td>
-                        <td className="py-2 text-center text-green-600 font-medium">{prog.terlaksana}</td>
-                        <td className="py-2 text-center text-gray-500">{prog.total}</td>
-                        <td className="py-2 text-right font-medium text-[#1B6B35]">{prog.total > 0 ? Math.round((prog.terlaksana / prog.total) * 100) : 0}%</td>
-                      </tr>
+                      <TableRow key={prog.name} className="border-[#EAF5EC]/60">
+                        <TableCell className="py-2 text-gray-700 whitespace-normal">{prog.name}</TableCell>
+                        <TableCell className="py-2 text-center text-gray-600">{prog.kegiatan}</TableCell>
+                        <TableCell className="py-2 text-center text-green-600 font-medium">{prog.terlaksana}</TableCell>
+                        <TableCell className="py-2 text-center text-gray-500">{prog.total}</TableCell>
+                        <TableCell className="py-2 text-right font-medium text-[#1B6B35]">{prog.total > 0 ? Math.round((prog.terlaksana / prog.total) * 100) : 0}%</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-[#EAF5EC]/50">
-                      <td className="py-2 font-semibold text-gray-700">Total {pokja.name}</td>
-                      <td className="py-2 text-center font-semibold text-gray-700">{jmlKeg}</td>
-                      <td className="py-2 text-center font-semibold text-green-600">{terlaksana}</td>
-                      <td className="py-2 text-center font-semibold text-gray-700">{total}</td>
-                      <td className="py-2 text-right font-bold text-[#1B6B35]">{pct}%</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                  </TableBody>
+                  <TableFooter className="bg-[#EAF5EC]/50">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell className="py-2 font-semibold text-gray-700 whitespace-normal">Total {pokja.name}</TableCell>
+                      <TableCell className="py-2 text-center font-semibold text-gray-700">{jmlKeg}</TableCell>
+                      <TableCell className="py-2 text-center font-semibold text-green-600">{terlaksana}</TableCell>
+                      <TableCell className="py-2 text-center font-semibold text-gray-700">{total}</TableCell>
+                      <TableCell className="py-2 text-right font-bold text-[#1B6B35]">{pct}%</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
               </CardContent>
             </Card>
           ))}
         </TabsContent>
 
         <TabsContent value="bulanan" className="mt-4 space-y-4">
-          <Select value={filterBulan} onValueChange={v => v && setFilterBulan(v)}>
+          <Select items={bulanItems} value={filterBulan} onValueChange={v => v && setFilterBulan(v)}>
             <SelectTrigger className="w-44 border-[#d1e8d5]"><SelectValue placeholder="Pilih Bulan" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Bulan</SelectItem>
-              {BULAN_FULL.map((b, i) => <SelectItem key={i + 1} value={String(i + 1)}>{b}</SelectItem>)}
+              {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -223,34 +226,32 @@ export default function LaporanPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-[#F6FBF7] border-b border-[#EAF5EC]">
-                        <th className="text-left px-4 py-2 font-medium text-gray-500 text-xs">Kegiatan</th>
-                        <th className="text-left px-4 py-2 font-medium text-gray-500 text-xs hidden md:table-cell">Pokja</th>
-                        <th className="text-left px-4 py-2 font-medium text-gray-500 text-xs hidden lg:table-cell">Program</th>
-                        <th className="text-center px-4 py-2 font-medium text-gray-500 text-xs">Status</th>
-                        <th className="text-left px-4 py-2 font-medium text-gray-500 text-xs hidden lg:table-cell">Tanggal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#EAF5EC]/20'}>
-                          <td className="px-4 py-2.5 text-gray-800 max-w-xs"><p className="line-clamp-1">{item.nama_kegiatan}</p></td>
-                          <td className="px-4 py-2.5 hidden md:table-cell">
-                            <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{item.pokjaName}</Badge>
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-500 text-xs hidden lg:table-cell">{item.progName}</td>
-                          <td className="px-4 py-2.5 text-center"><StatusBadge status={item.realisasi?.status ?? 'menunggu'} /></td>
-                          <td className="px-4 py-2.5 text-xs text-gray-500 hidden lg:table-cell">
-                            {item.realisasi?.tanggal_pelaksanaan ? new Date(item.realisasi.tanggal_pelaksanaan).toLocaleDateString('id-ID') : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-[#F6FBF7] hover:bg-[#F6FBF7] border-[#EAF5EC]">
+                      <TableHead className="px-4 text-gray-500 text-xs">Kegiatan</TableHead>
+                      <TableHead className="px-4 text-gray-500 text-xs hidden md:table-cell">Pokja</TableHead>
+                      <TableHead className="px-4 text-gray-500 text-xs hidden lg:table-cell">Program</TableHead>
+                      <TableHead className="px-4 text-gray-500 text-xs text-center">Status</TableHead>
+                      <TableHead className="px-4 text-gray-500 text-xs hidden lg:table-cell">Tanggal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item, idx) => (
+                      <TableRow key={item.id} className={idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/20'}>
+                        <TableCell className="px-4 py-2.5 text-gray-800 max-w-xs whitespace-normal"><p className="line-clamp-1">{item.nama_kegiatan}</p></TableCell>
+                        <TableCell className="px-4 py-2.5 hidden md:table-cell">
+                          <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{item.pokjaName}</Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-2.5 text-gray-500 text-xs hidden lg:table-cell">{item.progName}</TableCell>
+                        <TableCell className="px-4 py-2.5 text-center"><StatusBadge status={item.realisasi?.status ?? 'menunggu'} /></TableCell>
+                        <TableCell className="px-4 py-2.5 text-xs text-gray-500 hidden lg:table-cell">
+                          {item.realisasi?.tanggal_pelaksanaan ? new Date(item.realisasi.tanggal_pelaksanaan).toLocaleDateString('id-ID') : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           ))}

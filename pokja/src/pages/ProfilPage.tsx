@@ -127,9 +127,9 @@ export default function ProfilPage() {
               <Label>Password Saat Ini</Label>
               <div className="relative">
                 <Input type={showPass ? 'text' : 'password'} value={currentPass} onChange={e => setCurrentPass(e.target.value)} className="border-[#d1e8d5] pr-10" placeholder="••••••••" />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <Button type="button" variant="ghost" size="icon-xs" aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'} onClick={() => setShowPass(!showPass)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-transparent">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
             </div>
             <Separator className="bg-[#EAF5EC]" />

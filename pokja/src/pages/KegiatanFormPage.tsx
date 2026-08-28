@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -86,6 +87,11 @@ export default function KegiatanFormPage() {
     ? pokjaList.filter(p => p.id === user.pokja_id)
     : pokjaList
 
+  // Base UI menampilkan nilai mentah di trigger kalau `items` tidak dikirim ke
+  // Select.Root, sehingga yang tampil id-nya (angka) dan bukan namanya.
+  const pokjaItems = pokjaOptions.map(p => ({ value: String(p.id), label: p.name }))
+  const programItems = filteredProgram.map(p => ({ value: String(p.id), label: p.name }))
+
   function addJadwal(my: MonthYear | undefined) {
     if (!my) return
     const exists = form.jadwal.some(j => j.month === my.month && j.year === my.year)
@@ -165,19 +171,19 @@ export default function KegiatanFormPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
-                <Select value={form.pokja_id} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))} disabled={user?.role === 'operator'}>
+                <Select items={pokjaItems} value={form.pokja_id} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))} disabled={user?.role === 'operator'}>
                   <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
-                    {pokjaOptions.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                    {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Program Pokok <span className="text-red-500">*</span></Label>
-                <Select value={form.program_pokok_id} onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v }))}>
+                <Select items={programItems} value={form.program_pokok_id} onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v }))}>
                   <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Program Pokok" /></SelectTrigger>
                   <SelectContent>
-                    {filteredProgram.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                    {programItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -222,12 +228,17 @@ export default function KegiatanFormPage() {
               {form.jadwal.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {form.jadwal.map(my => (
-                    <div key={`${my.year}-${my.month}`} className="flex items-center gap-1.5 bg-[#1B6B35] text-white text-sm pl-3 pr-2 py-1 rounded-full">
+                    <Badge key={`${my.year}-${my.month}`} className="gap-1.5 rounded-full bg-[#1B6B35] pl-3 pr-1.5 py-1 text-sm text-white [a&]:hover:bg-[#1B6B35]">
                       <span>{BULAN_FULL[my.month - 1]} {my.year}</span>
-                      <button type="button" onClick={() => removeJadwal(my)} className="hover:bg-white/20 rounded-full p-0.5 transition-colors">
+                      <button
+                        type="button"
+                        aria-label={`Hapus jadwal ${BULAN_FULL[my.month - 1]} ${my.year}`}
+                        onClick={() => removeJadwal(my)}
+                        className="rounded-full p-0.5 transition-colors hover:bg-white/20"
+                      >
                         <X className="w-3 h-3" />
                       </button>
-                    </div>
+                    </Badge>
                   ))}
                 </div>
               ) : (

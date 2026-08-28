@@ -5,6 +5,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -59,6 +60,9 @@ export default function KegiatanListPage() {
       }))
   }, [allKegiatan, filterPokja, filterTahun, search, pokjaList, programPokok])
 
+  // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
+  const pokjaItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]
+
   async function handleDelete(id: number, nama: string) {
     try {
       await deleteKegiatan(id)
@@ -107,11 +111,10 @@ export default function KegiatanListPage() {
           </SelectContent>
         </Select>
         {user?.role !== 'operator' && (
-          <Select value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
+          <Select items={pokjaItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
             <SelectTrigger className="w-40 border-[#d1e8d5]"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Pokja</SelectItem>
-              {pokjaForFilter.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+              {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -124,73 +127,73 @@ export default function KegiatanListPage() {
           </p>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#134D26] text-white">
-                  <th className="text-left px-4 py-3 font-medium w-8">No</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Pokja</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Program Pokok</th>
-                  <th className="text-left px-4 py-3 font-medium">Nama Kegiatan</th>
-                  <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Sasaran</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Jadwal</th>
-                  <th className="text-right px-4 py-3 font-medium hidden xl:table-cell">Anggaran</th>
-                  <th className="text-center px-4 py-3 font-medium">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((k, idx) => (
-                  <tr key={k.id} className={idx % 2 === 0 ? 'bg-white hover:bg-[#EAF5EC]/40' : 'bg-[#EAF5EC]/30 hover:bg-[#EAF5EC]/60'}>
-                    <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs hidden lg:table-cell">{k.programName}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800 max-w-xs"><p className="line-clamp-2">{k.nama_kegiatan}</p></td>
-                    <td className="px-4 py-3 text-gray-500 text-xs hidden xl:table-cell">{k.sasaran}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell max-w-32"><p className="truncate">{k.jadwal || '-'}</p></td>
-                    <td className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell whitespace-nowrap">{formatRupiah(k.anggaran)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => navigate(`/kegiatan/${k.id}`)} className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-[#2E8B57] hover:bg-[#EAF5EC]">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {canEdit && (
-                          <>
-                            <button onClick={() => navigate(`/kegiatan/${k.id}/edit`)} className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-50">
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <AlertDialog>
-                              <AlertDialogTrigger render={
-                                <button className="h-8 w-8 p-0 rounded-md flex items-center justify-center text-red-500 hover:bg-red-50">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              } />
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Hapus Kegiatan?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Kegiatan "<strong>{k.nama_kegiatan}</strong>" akan dihapus beserta seluruh data realisasinya.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Batal</AlertDialogCancel>
-                                  <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDelete(k.id, k.nama_kegiatan)}>Hapus</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {data.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Tidak ada kegiatan yang sesuai filter.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+                <TableHead className="text-white w-8">No</TableHead>
+                <TableHead className="text-white hidden md:table-cell">Pokja</TableHead>
+                <TableHead className="text-white hidden lg:table-cell">Program Pokok</TableHead>
+                <TableHead className="text-white">Nama Kegiatan</TableHead>
+                <TableHead className="text-white hidden xl:table-cell">Sasaran</TableHead>
+                <TableHead className="text-white hidden lg:table-cell">Jadwal</TableHead>
+                <TableHead className="text-white text-right hidden xl:table-cell">Anggaran</TableHead>
+                <TableHead className="text-white text-center">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((k, idx) => (
+                <TableRow key={k.id} className={idx % 2 === 0 ? 'hover:bg-[#EAF5EC]/40' : 'bg-[#EAF5EC]/30 hover:bg-[#EAF5EC]/60'}>
+                  <TableCell className="px-4 py-3 text-gray-400">{idx + 1}</TableCell>
+                  <TableCell className="px-4 py-3 hidden md:table-cell">
+                    <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-600 text-xs hidden lg:table-cell">{k.programName}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium text-gray-800 max-w-xs whitespace-normal"><p className="line-clamp-2">{k.nama_kegiatan}</p></TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 text-xs hidden xl:table-cell">{k.sasaran}</TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell max-w-32"><p className="truncate">{k.jadwal || '-'}</p></TableCell>
+                  <TableCell className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell">{formatRupiah(k.anggaran)}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="ghost" size="icon" aria-label="Lihat detail" onClick={() => navigate(`/kegiatan/${k.id}`)} className="text-[#2E8B57] hover:bg-[#EAF5EC] hover:text-[#1B6B35]">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {canEdit && (
+                        <>
+                          <Button variant="ghost" size="icon" aria-label="Ubah kegiatan" onClick={() => navigate(`/kegiatan/${k.id}/edit`)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger render={
+                              <Button variant="ghost" size="icon" aria-label="Hapus kegiatan" className="text-red-500 hover:bg-red-50 hover:text-red-600">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            } />
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus Kegiatan?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Kegiatan "<strong>{k.nama_kegiatan}</strong>" akan dihapus beserta seluruh data realisasinya.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDelete(k.id, k.nama_kegiatan)}>Hapus</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {data.length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={8} className="px-4 py-10 text-center text-gray-400">Tidak ada kegiatan yang sesuai filter.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

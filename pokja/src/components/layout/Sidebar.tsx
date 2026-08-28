@@ -5,6 +5,7 @@ import {
   Users, Building2, Layers, ChevronLeft, ChevronRight, LogOut, User
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface NavItem {
@@ -127,26 +128,30 @@ export function Sidebar() {
           <User className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span className="truncate">Profil</span>}
         </NavLink>
-        <button
+        <Button
+          variant="ghost"
           onClick={logout}
+          title={collapsed ? 'Keluar' : undefined}
           className={cn(
-            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-green-100 hover:bg-red-700 hover:text-white transition-colors',
+            'h-auto w-full justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-green-100 hover:bg-red-700 hover:text-white',
             collapsed && 'justify-center px-2'
           )}
-          title={collapsed ? 'Keluar' : undefined}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span>Keluar</span>}
-        </button>
+        </Button>
       </div>
 
       {/* Collapse toggle */}
-      <button
+      <Button
+        variant="outline"
+        size="icon-xs"
+        aria-label={collapsed ? 'Lebarkan menu' : 'Ciutkan menu'}
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 bg-white border border-[#d1e8d5] text-[#1B6B35] rounded-full w-6 h-6 flex items-center justify-center shadow-sm hover:bg-[#EAF5EC] transition-colors z-10"
+        className="absolute -right-3 top-20 z-10 rounded-full border-[#d1e8d5] bg-white text-[#1B6B35] shadow-sm hover:bg-[#EAF5EC] hover:text-[#134D26]"
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-      </button>
+      </Button>
     </aside>
   )
 }
