@@ -7,6 +7,7 @@ import {
 import { CheckCircle2, XCircle, Clock, TrendingUp, AlertTriangle, ChevronRight, Wallet, BadgeDollarSign } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
@@ -28,6 +29,19 @@ function formatJuta(n: number) {
   return String(n)
 }
 
+// null = serapan tak terdefinisi karena rencana anggarannya 0.
+// Menampilkan "0%" untuk kasus itu menyesatkan: pembaginya nol, bukan hasilnya nol.
+function serapanBadgeClass(pct: number | null) {
+  if (pct === null) return 'bg-gray-100 text-gray-500'
+  if (pct >= 70) return 'bg-green-100 text-green-700'
+  if (pct >= 40) return 'bg-yellow-100 text-yellow-700'
+  return 'bg-red-100 text-red-600'
+}
+
+function formatPct(pct: number | null) {
+  return pct === null ? '—' : `${pct}%`
+}
+
 function getStatusBadge(status: string | null) {
   if (status === 'terlaksana') return <Badge className="bg-green-100 text-green-700 border-green-200">✓ Terlaksana</Badge>
   if (status === 'tidak_terlaksana') return <Badge className="bg-red-100 text-red-700 border-red-200">✗ Belum Terlaksana</Badge>
@@ -37,78 +51,102 @@ function getStatusBadge(status: string | null) {
 export default function DashboardPage() {
   const { user } = useAuth()
   const { pokja: pokjaList, programPokok } = useData()
+  const [filterTahun, setFilterTahun] = useState(String(CURRENT_YEAR))
+  const [dariBulan, setDariBulan] = useState('1')
+  const [sampaiBulan, setSampaiBulan] = useState('12')
   const [filterPokja, setFilterPokja] = useState<string>('all')
+  const [filterProgram, setFilterProgram] = useState<string>('all')
   const [kegiatan, setKegiatan] = useState<Kegiatan[]>([])
   const [realisasi, setRealisasi] = useState<RealisasiKegiatan[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  const tahun = parseInt(filterTahun)
+  // Jendela tampilan: rentang bulan [dari, sampai] di dalam tahun terpilih.
+  const dari = parseInt(dariBulan)
+  const sampai = parseInt(sampaiBulan)
+  // Sesi baru bisa disebut terlambat kalau bulannya sudah benar-benar lewat.
+  // Tanpa ini, rentang yang mencakup bulan depan akan menuduhnya terlambat.
+  const bulanSudahLewat = tahun < CURRENT_YEAR ? 12 : tahun > CURRENT_YEAR ? 0 : CURRENT_MONTH
+  const batasTerlambat = Math.min(sampai, bulanSudahLewat)
+
   useEffect(() => {
     const opts = user?.role === 'operator' && user.pokja_id
-      ? { pokjaId: user.pokja_id, tahun: CURRENT_YEAR }
-      : { tahun: CURRENT_YEAR }
-    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun: CURRENT_YEAR })])
+      ? { pokjaId: user.pokja_id, tahun }
+      : { tahun }
+    Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun })])
       .then(([k, r]) => { setKegiatan(k); setRealisasi(r) })
       .finally(() => setIsLoading(false))
-  }, [user])
+  }, [user, tahun])
 
-  const filteredKegiatan = useMemo(() => {
-    if (filterPokja === 'all') return kegiatan
-    return kegiatan.filter(k => k.pokja_id === parseInt(filterPokja))
-  }, [kegiatan, filterPokja])
+  // Satu sumber kebenaran: seluruh kartu, grafik, dan tabel memakai ini
+  // supaya filter berlaku untuk seluruh halaman, bukan sebagian.
+  const scopedKegiatan = useMemo(() => kegiatan.filter(k => {
+    if (filterPokja !== 'all' && k.pokja_id !== parseInt(filterPokja)) return false
+    if (filterProgram !== 'all' && k.program_pokok_id !== parseInt(filterProgram)) return false
+    return true
+  }), [kegiatan, filterPokja, filterProgram])
+
+  // Pokja yang muncul di grafik & tabel serapan: dibatasi pokja milik operator,
+  // lalu dipersempit lagi oleh filter Pokja.
+  const pokjaTampil = useMemo(() => {
+    const base = user?.role === 'operator' && user.pokja_id
+      ? pokjaList.filter(p => p.id === user.pokja_id)
+      : pokjaList
+    return filterPokja === 'all' ? base : base.filter(p => p.id === parseInt(filterPokja))
+  }, [pokjaList, user, filterPokja])
 
   const allScheduled = useMemo(() => {
     let scheduled = 0, terlaksana = 0, belum = 0
-    kegiatan.forEach(k => {
+    scopedKegiatan.forEach(k => {
       SCHED_KEYS.forEach((key, idx) => {
         const bulan = idx + 1
-        if (k[key]) {
+        // Hanya sesi di dalam rentang bulan yang dipilih.
+        if (k[key] && bulan >= dari && bulan <= sampai) {
           scheduled++
-          const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === bulan && r.tahun === CURRENT_YEAR)
+          const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === bulan && r.tahun === tahun)
           if (r) {
             if (r.status === 'terlaksana') terlaksana++
-          } else if (bulan < CURRENT_MONTH) {
+          } else if (bulan < batasTerlambat) {
             belum++
           }
         }
       })
     })
     return { scheduled, terlaksana, belum }
-  }, [kegiatan, realisasi])
+  }, [scopedKegiatan, realisasi, tahun, dari, sampai, batasTerlambat])
 
   const pctRealisasi = allScheduled.scheduled > 0
     ? Math.round((allScheduled.terlaksana / allScheduled.scheduled) * 100)
     : 0
 
   const pokjaChartData = useMemo(() => {
-    const pokjaToShow = user?.role === 'operator' && user.pokja_id
-      ? pokjaList.filter(p => p.id === user.pokja_id)
-      : pokjaList
-    return pokjaToShow.map(pokja => {
-      const keg = kegiatan.filter(k => k.pokja_id === pokja.id)
+    return pokjaTampil.map(pokja => {
+      const keg = scopedKegiatan.filter(k => k.pokja_id === pokja.id)
       let sched = 0, real = 0
       keg.forEach(k => {
         SCHED_KEYS.forEach((key, idx) => {
-          if (k[key]) {
+          if (k[key] && idx + 1 >= dari && idx + 1 <= sampai) {
             sched++
-            const r = realisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === CURRENT_YEAR)
+            const r = realisasi.find(r2 => r2.kegiatan_id === k.id && r2.bulan === idx + 1 && r2.tahun === tahun)
             if (r && r.status === 'terlaksana') real++
           }
         })
       })
       return { name: pokja.name, pct: sched > 0 ? Math.round((real / sched) * 100) : 0, terlaksana: real, total: sched }
     })
-  }, [kegiatan, realisasi, pokjaList, user])
+  }, [scopedKegiatan, realisasi, pokjaTampil, tahun, dari, sampai])
 
   const lineData = useMemo(() => {
-    return BULAN_LABELS.slice(0, CURRENT_MONTH).map((bulan, idx) => {
+    return BULAN_LABELS.slice(dari - 1, sampai).map((bulan, offset) => {
+      const idx = dari - 1 + offset
       const bulanNum = idx + 1
-      const scheduledThisMonth = kegiatan.filter(k => k[SCHED_KEYS[idx]]).length
+      const scheduledThisMonth = scopedKegiatan.filter(k => k[SCHED_KEYS[idx]]).length
       const realizedThisMonth = realisasi.filter(
-        r => r.bulan === bulanNum && r.tahun === CURRENT_YEAR && r.status === 'terlaksana' && kegiatan.find(k => k.id === r.kegiatan_id)
+        r => r.bulan === bulanNum && r.tahun === tahun && r.status === 'terlaksana' && scopedKegiatan.find(k => k.id === r.kegiatan_id)
       ).length
       return { bulan, dijadwalkan: scheduledThisMonth, terlaksana: realizedThisMonth }
     })
-  }, [kegiatan, realisasi])
+  }, [scopedKegiatan, realisasi, tahun, dari, sampai])
 
   const pieData = [
     { name: 'Terlaksana', value: allScheduled.terlaksana, color: '#1B6B35' },
@@ -117,38 +155,33 @@ export default function DashboardPage() {
   ]
 
   const anggaranChartData = useMemo(() => {
-    const pokjaToShow = user?.role === 'operator' && user.pokja_id
-      ? pokjaList.filter(p => p.id === user.pokja_id)
-      : pokjaList
-    return pokjaToShow.map(pokja => {
-      const keg = kegiatan.filter(k => k.pokja_id === pokja.id)
+    return pokjaTampil.map(pokja => {
+      const keg = scopedKegiatan.filter(k => k.pokja_id === pokja.id)
       const rencana = keg.reduce((sum, k) => sum + k.anggaran, 0)
-      const realisasiAnggaran = keg.reduce((sum, k) => {
-        const totalSesi = SCHED_KEYS.filter(key => k[key]).length
-        if (totalSesi === 0) return sum
-        const anggaranPerSesi = k.anggaran / totalSesi
-        const sesiTerlaksana = realisasi.filter(r => r.kegiatan_id === k.id && r.tahun === CURRENT_YEAR && r.status === 'terlaksana').length
-        return sum + sesiTerlaksana * anggaranPerSesi
-      }, 0)
-      return { name: pokja.name, rencana, realisasi: Math.round(realisasiAnggaran), pct: rencana > 0 ? Math.round((realisasiAnggaran / rencana) * 100) : 0 }
+      // Serapan nyata: jumlah anggaran aktual yang diinput operator per sesi.
+      const realisasiAnggaran = keg.reduce((sum, k) => sum + realisasi
+        .filter(r => r.kegiatan_id === k.id && r.tahun === tahun && r.bulan >= dari && r.bulan <= sampai && r.status === 'terlaksana')
+        .reduce((acc, r) => acc + r.anggaran_aktual, 0), 0)
+      return { name: pokja.name, rencana, realisasi: realisasiAnggaran, pct: rencana > 0 ? Math.round((realisasiAnggaran / rencana) * 100) : null }
     })
-  }, [kegiatan, realisasi, pokjaList, user])
+  }, [scopedKegiatan, realisasi, pokjaTampil, tahun, dari, sampai])
 
   const totalRencana = anggaranChartData.reduce((s, d) => s + d.rencana, 0)
   const totalRealisasi = anggaranChartData.reduce((s, d) => s + d.realisasi, 0)
-  const pctSerapan = totalRencana > 0 ? Math.round((totalRealisasi / totalRencana) * 100) : 0
+  const pctSerapan = totalRencana > 0 ? Math.round((totalRealisasi / totalRencana) * 100) : null
 
-  const tableData = filteredKegiatan.map(k => {
+  const tableData = scopedKegiatan.map(k => {
     const prog = programPokok.find(p => p.id === k.program_pokok_id)
     const pokja = pokjaList.find(p => p.id === k.pokja_id)
-    const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === CURRENT_MONTH && r.tahun === CURRENT_YEAR)
-    const scheduledThisMonth = k[SCHED_KEYS[CURRENT_MONTH - 1]]
+    // Kolom status menampilkan satu bulan; pakai bulan akhir rentang sebagai acuan.
+    const r = realisasi.find(r => r.kegiatan_id === k.id && r.bulan === sampai && r.tahun === tahun)
+    const scheduledThisMonth = k[SCHED_KEYS[sampai - 1]]
     return {
       ...k,
       programName: prog?.name ?? '-',
       pokjaName: pokja?.name ?? '-',
       statusBulanIni: r?.status ?? (scheduledThisMonth ? 'menunggu' : 'tidak_dijadwalkan'),
-      isLate: scheduledThisMonth && !r,
+      isLate: scheduledThisMonth && !r && sampai <= bulanSudahLewat,
     }
   })
 
@@ -156,17 +189,88 @@ export default function DashboardPage() {
     ? pokjaList.filter(p => p.id === user.pokja_id)
     : pokjaList
 
+  // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
+  const pokjaFilterItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]
+  const tahunItems = [{ value: '2026', label: '2026' }, { value: '2025', label: '2025' }]
+  const bulanItems = BULAN_LABELS.map((b, i) => ({ value: String(i + 1), label: b }))
+
+  // Jaga agar rentangnya tetap masuk akal: ujung yang lain ikut bergeser
+  // kalau pengguna memilih bulan awal yang melewati bulan akhir, atau sebaliknya.
+  function gantiDari(v: string) {
+    setDariBulan(v)
+    if (parseInt(v) > sampai) setSampaiBulan(v)
+  }
+  function gantiSampai(v: string) {
+    setSampaiBulan(v)
+    if (parseInt(v) < dari) setDariBulan(v)
+  }
+  // Program menyesuaikan Pokja yang sedang dipilih.
+  const programItems = [
+    { value: 'all', label: 'Semua Program' },
+    ...programPokok
+      .filter(pr => filterPokja === 'all'
+        ? pokjaForFilter.some(p => p.id === pr.pokja_id)
+        : pr.pokja_id === parseInt(filterPokja))
+      .map(pr => ({ value: String(pr.id), label: pr.name })),
+  ]
+
+  function gantiPokja(v: string) {
+    setFilterPokja(v)
+    setFilterProgram('all') // daftar program berubah, pilihan lama bisa tak berlaku
+  }
+
   if (isLoading) {
     return <div className="py-20 text-center text-gray-400">Memuat data dashboard...</div>
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">Dashboard Monitoring</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Tahun {CURRENT_YEAR} — Data per {BULAN_LABELS[CURRENT_MONTH - 1]} {CURRENT_YEAR}
-        </p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1B6B35]">Dashboard Monitoring</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Tahun {tahun} — {dari === sampai
+              ? `Bulan ${BULAN_LABELS[dari - 1]}`
+              : `${BULAN_LABELS[dari - 1]} s/d ${BULAN_LABELS[sampai - 1]}`} {tahun}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Select items={tahunItems} value={filterTahun} onValueChange={v => v && setFilterTahun(v)}>
+            <SelectTrigger className="w-28 border-[#d1e8d5] text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {tahunItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1.5">
+            <Select items={bulanItems} value={dariBulan} onValueChange={v => v && gantiDari(v)}>
+              <SelectTrigger className="w-24 border-[#d1e8d5] text-sm" aria-label="Bulan awal"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-gray-400 shrink-0">s/d</span>
+            <Select items={bulanItems} value={sampaiBulan} onValueChange={v => v && gantiSampai(v)}>
+              <SelectTrigger className="w-24 border-[#d1e8d5] text-sm" aria-label="Bulan akhir"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {user?.role !== 'operator' && (
+            <Select items={pokjaFilterItems} value={filterPokja} onValueChange={v => v && gantiPokja(v)}>
+              <SelectTrigger className="w-40 border-[#d1e8d5] text-sm"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
+              <SelectContent>
+                {pokjaFilterItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select items={programItems} value={filterProgram} onValueChange={v => v && setFilterProgram(v)}>
+            <SelectTrigger className="w-52 border-[#d1e8d5] text-sm"><SelectValue placeholder="Filter Program" /></SelectTrigger>
+            <SelectContent>
+              {programItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* KPI Kegiatan */}
@@ -176,7 +280,7 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500">Total Kegiatan</p>
-                <p className="text-3xl font-bold text-[#1B6B35] mt-1">{kegiatan.length}</p>
+                <p className="text-3xl font-bold text-[#1B6B35] mt-1">{scopedKegiatan.length}</p>
                 <p className="text-xs text-gray-400 mt-1">{allScheduled.scheduled} sesi dijadwalkan</p>
               </div>
               <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
@@ -237,7 +341,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-500">Total Rencana Anggaran</p>
                 <p className="text-2xl font-bold text-[#1B6B35] mt-1">{formatRupiah(totalRencana)}</p>
-                <p className="text-xs text-gray-400 mt-1">seluruh kegiatan tahun {CURRENT_YEAR}</p>
+                <p className="text-xs text-gray-400 mt-1">seluruh kegiatan tahun {tahun}</p>
               </div>
               <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-[#1B6B35]" />
@@ -249,11 +353,11 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-gray-500">Estimasi Realisasi Anggaran</p>
+                <p className="text-sm text-gray-500">Realisasi Anggaran</p>
                 <p className="text-2xl font-bold text-[#2E8B57] mt-1">{formatRupiah(totalRealisasi)}</p>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <Progress value={pctSerapan} className="h-2 flex-1 [&>div]:bg-[#2E8B57]" />
-                  <span className="text-xs font-semibold text-[#2E8B57] shrink-0">{pctSerapan}%</span>
+                  <Progress value={pctSerapan ?? 0} className="h-2 flex-1 [&>div]:bg-[#2E8B57]" />
+                  <span className="text-xs font-semibold text-[#2E8B57] shrink-0">{formatPct(pctSerapan)}</span>
                 </div>
               </div>
               <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
@@ -309,7 +413,7 @@ export default function DashboardPage() {
       <Card className="border-[#d1e8d5]">
         <CardHeader className="pb-2">
           <CardTitle className="text-base text-[#1B6B35]">Tren Realisasi Bulanan</CardTitle>
-          <CardDescription>Perbandingan sesi dijadwalkan vs terlaksana (Jan–{BULAN_LABELS[CURRENT_MONTH - 1]} {CURRENT_YEAR})</CardDescription>
+          <CardDescription>Perbandingan sesi dijadwalkan vs terlaksana ({BULAN_LABELS[dari - 1]}–{BULAN_LABELS[sampai - 1]} {tahun})</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
@@ -347,43 +451,39 @@ export default function DashboardPage() {
               <Bar dataKey="realisasi" fill="#1B6B35" radius={[4, 4, 0, 0]} name="realisasi" />
             </BarChart>
           </ResponsiveContainer>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#EAF5EC]">
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Pokja</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Rencana Anggaran</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Realisasi Anggaran</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">% Serapan</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="mt-4">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[#EAF5EC] hover:bg-transparent">
+                  <TableHead className="px-3 text-gray-500 text-xs">Pokja</TableHead>
+                  <TableHead className="px-3 text-gray-500 text-xs text-right">Rencana Anggaran</TableHead>
+                  <TableHead className="px-3 text-gray-500 text-xs text-right">Realisasi Anggaran</TableHead>
+                  <TableHead className="px-3 text-gray-500 text-xs text-right">% Serapan</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {anggaranChartData.map((d, idx) => (
-                  <tr key={d.name} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#EAF5EC]/30'}>
-                    <td className="py-2 px-3 font-medium text-gray-700">{d.name}</td>
-                    <td className="py-2 px-3 text-right text-gray-600">{formatRupiah(d.rencana)}</td>
-                    <td className="py-2 px-3 text-right text-[#1B6B35] font-medium">{formatRupiah(d.realisasi)}</td>
-                    <td className="py-2 px-3 text-right">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${d.pct >= 70 ? 'bg-green-100 text-green-700' : d.pct >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
-                        {d.pct}%
-                      </span>
-                    </td>
-                  </tr>
+                  <TableRow key={d.name} className={idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/30'}>
+                    <TableCell className="py-2 px-3 font-medium text-gray-700">{d.name}</TableCell>
+                    <TableCell className="py-2 px-3 text-right text-gray-600">{formatRupiah(d.rencana)}</TableCell>
+                    <TableCell className="py-2 px-3 text-right text-[#1B6B35] font-medium">{formatRupiah(d.realisasi)}</TableCell>
+                    <TableCell className="py-2 px-3 text-right">
+                      <Badge className={`rounded-full ${serapanBadgeClass(d.pct)}`}>{formatPct(d.pct)}</Badge>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-[#EAF5EC]/60 border-t border-[#d1e8d5]">
-                  <td className="py-2 px-3 font-semibold text-gray-700">Total</td>
-                  <td className="py-2 px-3 text-right font-semibold text-gray-700">{formatRupiah(totalRencana)}</td>
-                  <td className="py-2 px-3 text-right font-bold text-[#1B6B35]">{formatRupiah(totalRealisasi)}</td>
-                  <td className="py-2 px-3 text-right">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${pctSerapan >= 70 ? 'bg-green-100 text-green-700' : pctSerapan >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
-                      {pctSerapan}%
-                    </span>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+              </TableBody>
+              <TableFooter className="bg-[#EAF5EC]/60 border-t border-[#d1e8d5]">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="py-2 px-3 font-semibold text-gray-700">Total</TableCell>
+                  <TableCell className="py-2 px-3 text-right font-semibold text-gray-700">{formatRupiah(totalRencana)}</TableCell>
+                  <TableCell className="py-2 px-3 text-right font-bold text-[#1B6B35]">{formatRupiah(totalRealisasi)}</TableCell>
+                  <TableCell className="py-2 px-3 text-right">
+                    <Badge className={`rounded-full font-bold ${serapanBadgeClass(pctSerapan)}`}>{formatPct(pctSerapan)}</Badge>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -394,65 +494,54 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base text-[#1B6B35]">Ringkasan Kegiatan</CardTitle>
-              <CardDescription>Status kegiatan bulan {BULAN_LABELS[CURRENT_MONTH - 1]}</CardDescription>
+              <CardDescription>Status kegiatan bulan {BULAN_LABELS[sampai - 1]} {tahun}</CardDescription>
             </div>
-            {user?.role !== 'operator' && (
-              <Select value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
-                <SelectTrigger className="w-44 border-[#d1e8d5] text-sm">
-                  <SelectValue placeholder="Filter Pokja" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Pokja</SelectItem>
-                  {pokjaForFilter.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#134D26] text-white">
-                  <th className="text-left px-4 py-3 font-medium">Kegiatan</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Program Pokok</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Pokja</th>
-                  <th className="text-left px-4 py-3 font-medium">Status Bulan Ini</th>
-                  <th className="text-left px-4 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableData.map((k, idx) => (
-                  <tr key={k.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#EAF5EC]/40'}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {k.isLate && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
-                        <span className="font-medium text-gray-800 line-clamp-1">{k.nama_kegiatan}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{k.programName}</td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      {k.statusBulanIni === 'tidak_dijadwalkan'
-                        ? <Badge variant="outline" className="text-gray-400 text-xs">— Tidak Dijadwalkan</Badge>
-                        : getStatusBadge(k.statusBulanIni === 'menunggu' ? null : k.statusBulanIni)
-                      }
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link to={`/kegiatan/${k.id}`} className="text-[#1B6B35] hover:text-[#134D26] flex items-center gap-1 text-xs">
-                        Detail <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {tableData.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Tidak ada data kegiatan.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+                <TableHead className="text-white">Kegiatan</TableHead>
+                <TableHead className="text-white hidden md:table-cell">Program Pokok</TableHead>
+                <TableHead className="text-white hidden lg:table-cell">Pokja</TableHead>
+                <TableHead className="text-white">Status Bulan Ini</TableHead>
+                <TableHead className="text-white"><span className="sr-only">Aksi</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tableData.map((k, idx) => (
+                <TableRow key={k.id} className={idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/40'}>
+                  <TableCell className="px-4 py-3 whitespace-normal">
+                    <div className="flex items-center gap-2">
+                      {k.isLate && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
+                      <span className="font-medium text-gray-800 line-clamp-1">{k.nama_kegiatan}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 hidden md:table-cell">{k.programName}</TableCell>
+                  <TableCell className="px-4 py-3 hidden lg:table-cell">
+                    <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    {k.statusBulanIni === 'tidak_dijadwalkan'
+                      ? <Badge variant="outline" className="text-gray-400 text-xs">— Tidak Dijadwalkan</Badge>
+                      : getStatusBadge(k.statusBulanIni === 'menunggu' ? null : k.statusBulanIni)
+                    }
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <Link to={`/kegiatan/${k.id}`} className="text-[#1B6B35] hover:text-[#134D26] flex items-center gap-1 text-xs">
+                      Detail <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {tableData.length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={5} className="px-4 py-8 text-center text-gray-400">Tidak ada data kegiatan.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
