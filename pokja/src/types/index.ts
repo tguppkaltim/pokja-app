@@ -33,18 +33,6 @@ export interface Kegiatan {
   pelaksana: string
   anggaran: number
   tahun: number
-  sched_jan: boolean
-  sched_feb: boolean
-  sched_mar: boolean
-  sched_apr: boolean
-  sched_mei: boolean
-  sched_jun: boolean
-  sched_jul: boolean
-  sched_agu: boolean
-  sched_sep: boolean
-  sched_okt: boolean
-  sched_nov: boolean
-  sched_des: boolean
   created_by: string
   created_at: string
 }

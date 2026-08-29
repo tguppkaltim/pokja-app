@@ -17,12 +17,6 @@ import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { toast } from 'sonner'
 
 
-const SCHED_MONTH_MAP: Record<string, number> = {
-  sched_jan: 1, sched_feb: 2, sched_mar: 3, sched_apr: 4,
-  sched_mei: 5, sched_jun: 6, sched_jul: 7, sched_agu: 8,
-  sched_sep: 9, sched_okt: 10, sched_nov: 11, sched_des: 12,
-}
-
 const emptyForm = {
   pokja_id: '',
   program_pokok_id: '',
@@ -31,19 +25,6 @@ const emptyForm = {
   pelaksana: '',
   anggaran: '',
   jadwal: [] as string[], // YYYY-MM-DD
-}
-
-// Kolom sched_* belum di-drop dan masih dibaca sebagian kode, jadi tetap
-// ditulis selaras dengan daftar tanggal selama masa transisi.
-function jadwalToSchedFields(jadwal: string[]): Record<string, boolean> {
-  const fields: Record<string, boolean> = {}
-  for (const key of Object.keys(SCHED_MONTH_MAP)) fields[key] = false
-  for (const tanggal of jadwal) {
-    const bulan = parseInt(tanggal.slice(5, 7))
-    const key = Object.keys(SCHED_MONTH_MAP).find(k => SCHED_MONTH_MAP[k] === bulan)
-    if (key) fields[key] = true
-  }
-  return fields
 }
 
 export default function KegiatanFormPage() {
@@ -124,7 +105,6 @@ export default function KegiatanFormPage() {
     if (!user) return
 
     const tahun = parseInt(form.jadwal[0].slice(0, 4))
-    const schedFields = jadwalToSchedFields(form.jadwal)
 
     setIsSaving(true)
     try {
@@ -136,7 +116,6 @@ export default function KegiatanFormPage() {
         pelaksana: form.pelaksana,
         anggaran: parseInt(form.anggaran) || 0,
         tahun,
-        ...schedFields,
         created_by: user.id,
       }
 

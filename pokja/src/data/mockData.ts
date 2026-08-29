@@ -115,9 +115,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Pelatihan Penguatan Nilai-nilai Pancasila bagi Kader PKK',
     sasaran: 'Kader PKK Kecamatan', pelaksana: 'Tim Pokja I',
     anggaran: 15000000, tahun: 2026,
-    sched_jan: true, sched_feb: false, sched_mar: false, sched_apr: true, sched_mei: false,
-    sched_jun: false, sched_jul: false, sched_agu: true, sched_sep: false, sched_okt: false,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-1', created_at: '2026-01-10T00:00:00Z',
   },
   {
@@ -125,9 +122,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Sosialisasi Bela Negara dalam Keluarga',
     sasaran: 'Ibu Rumah Tangga', pelaksana: 'Tim Pokja I',
     anggaran: 8000000, tahun: 2026,
-    sched_jan: false, sched_feb: true, sched_mar: false, sched_apr: false, sched_mei: true,
-    sched_jun: false, sched_jul: false, sched_agu: false, sched_sep: true, sched_okt: false,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-1', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja I - Program 2
@@ -136,9 +130,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Kerja Bakti Lingkungan Bersama',
     sasaran: 'Masyarakat RT/RW', pelaksana: 'Tim Pokja I bersama RT/RW',
     anggaran: 5000000, tahun: 2026,
-    sched_jan: false, sched_feb: false, sched_mar: true, sched_apr: false, sched_mei: false,
-    sched_jun: true, sched_jul: false, sched_agu: false, sched_sep: false, sched_okt: true,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-1', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja II - Program 4
@@ -147,9 +138,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Pembinaan dan Monitoring PAUD se-Kaltim',
     sasaran: '50 Lembaga PAUD', pelaksana: 'Tim Pokja II',
     anggaran: 25000000, tahun: 2026,
-    sched_jan: false, sched_feb: true, sched_mar: false, sched_apr: false, sched_mei: false,
-    sched_jun: true, sched_jul: false, sched_agu: false, sched_sep: false, sched_okt: false,
-    sched_nov: true, sched_des: false,
     created_by: 'user-op-2', created_at: '2026-01-10T00:00:00Z',
   },
   {
@@ -157,9 +145,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Workshop Parenting untuk Orang Tua Anak Usia Dini',
     sasaran: '200 Orang Tua', pelaksana: 'Tim Pokja II',
     anggaran: 12000000, tahun: 2026,
-    sched_jan: false, sched_feb: false, sched_mar: true, sched_apr: false, sched_mei: false,
-    sched_jun: false, sched_jul: true, sched_agu: false, sched_sep: false, sched_okt: true,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-2', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja II - Program 5
@@ -168,9 +153,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Gerakan Literasi Keluarga — Pojok Baca Desa',
     sasaran: 'Keluarga di Pedesaan', pelaksana: 'Tim Pokja II',
     anggaran: 18000000, tahun: 2026,
-    sched_jan: true, sched_feb: false, sched_mar: false, sched_apr: true, sched_mei: false,
-    sched_jun: false, sched_jul: true, sched_agu: false, sched_sep: false, sched_okt: false,
-    sched_nov: false, sched_des: true,
     created_by: 'user-op-2', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja III - Program 7
@@ -179,9 +161,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Pelatihan Pengolahan Pangan Lokal Kalimantan',
     sasaran: '100 Ibu PKK', pelaksana: 'Tim Pokja III',
     anggaran: 20000000, tahun: 2026,
-    sched_jan: false, sched_feb: true, sched_mar: false, sched_apr: false, sched_mei: true,
-    sched_jun: false, sched_jul: false, sched_agu: true, sched_sep: false, sched_okt: false,
-    sched_nov: true, sched_des: false,
     created_by: 'user-op-3', created_at: '2026-01-10T00:00:00Z',
   },
   {
@@ -189,9 +168,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Lomba Masakan Berbahan Pangan Lokal',
     sasaran: 'Tim PKK Kabupaten/Kota', pelaksana: 'Tim Pokja III',
     anggaran: 30000000, tahun: 2026,
-    sched_jan: false, sched_feb: false, sched_mar: false, sched_apr: false, sched_mei: false,
-    sched_jun: false, sched_jul: false, sched_agu: false, sched_sep: false, sched_okt: true,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-3', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja III - Program 9
@@ -200,9 +176,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Pelatihan Manajemen Rumah Tangga Sehat',
     sasaran: '150 Ibu Rumah Tangga', pelaksana: 'Tim Pokja III',
     anggaran: 10000000, tahun: 2026,
-    sched_jan: false, sched_feb: false, sched_mar: true, sched_apr: false, sched_mei: false,
-    sched_jun: true, sched_jul: false, sched_agu: false, sched_sep: true, sched_okt: false,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-3', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja IV - Program 10
@@ -211,9 +184,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Penyuluhan Kesehatan Ibu dan Anak (KIA)',
     sasaran: '500 Ibu dan Anak', pelaksana: 'Tim Pokja IV bersama Dinkes',
     anggaran: 35000000, tahun: 2026,
-    sched_jan: true, sched_feb: false, sched_mar: true, sched_apr: false, sched_mei: true,
-    sched_jun: false, sched_jul: true, sched_agu: false, sched_sep: true, sched_okt: false,
-    sched_nov: true, sched_des: false,
     created_by: 'user-op-4', created_at: '2026-01-10T00:00:00Z',
   },
   {
@@ -221,9 +191,6 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Pemeriksaan Kesehatan Gratis Kader PKK',
     sasaran: '300 Kader PKK', pelaksana: 'Tim Pokja IV bersama Puskesmas',
     anggaran: 22000000, tahun: 2026,
-    sched_jan: false, sched_feb: true, sched_mar: false, sched_apr: false, sched_mei: false,
-    sched_jun: true, sched_jul: false, sched_agu: false, sched_sep: false, sched_okt: false,
-    sched_nov: false, sched_des: true,
     created_by: 'user-op-4', created_at: '2026-01-10T00:00:00Z',
   },
   // Pokja IV - Program 11
@@ -232,15 +199,11 @@ export const mockKegiatan: Kegiatan[] = [
     nama_kegiatan: 'Gerakan Desa Bersih dan Sehat',
     sasaran: 'Seluruh Desa di Kaltim', pelaksana: 'Tim Pokja IV',
     anggaran: 18000000, tahun: 2026,
-    sched_jan: false, sched_feb: false, sched_mar: false, sched_apr: true, sched_mei: false,
-    sched_jun: false, sched_jul: false, sched_agu: true, sched_sep: false, sched_okt: false,
-    sched_nov: false, sched_des: false,
     created_by: 'user-op-4', created_at: '2026-01-10T00:00:00Z',
   },
 ]
 
-// Jadwal per tanggal. Dibangkitkan dari sched_* lama: tiap bulan yang
-// dicentang jadi satu sesi bertanggal 1, sama seperti aturan migrasi 006.
+// Jadwal per tanggal — sumber kebenaran jadwal kegiatan.
 export const mockJadwal: JadwalKegiatan[] = [
   { id: 1, kegiatan_id: 1, tanggal: '2026-01-01', created_at: '2026-01-01T00:00:00Z' },
   { id: 2, kegiatan_id: 1, tanggal: '2026-04-01', created_at: '2026-04-01T00:00:00Z' },
@@ -322,8 +285,3 @@ export const mockEvidence: EvidenceFile[] = [
 
 export const BULAN_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 export const BULAN_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-
-export const SCHED_KEYS: (keyof Kegiatan)[] = [
-  'sched_jan', 'sched_feb', 'sched_mar', 'sched_apr', 'sched_mei', 'sched_jun',
-  'sched_jul', 'sched_agu', 'sched_sep', 'sched_okt', 'sched_nov', 'sched_des',
-]
