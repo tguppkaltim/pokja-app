@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
-import { useAuth } from '@/contexts/AuthContext'
-import { useData } from '@/contexts/DataContext'
+import { useAuth } from '@/contexts/auth-context'
+import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, upsertRealisasi, uploadEvidence, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
 import { BULAN_FULL } from '@/data/mockData'
@@ -18,6 +18,11 @@ import { cn, toTanggalLokal, dariTanggalLokal, formatTanggalPanjang } from '@/li
 import { toast } from 'sonner'
 
 const CURRENT_YEAR = new Date().getFullYear()
+
+// Referensi stabil untuk kondisi kosong. Menulis `: []` langsung akan membuat
+// array baru tiap render, sehingga dependency useMemo di bawah berubah terus.
+const TANPA_RIWAYAT: RealisasiKegiatan[] = []
+const TANPA_JADWAL: JadwalKegiatan[] = []
 
 const MAKS_FILE = 5
 const MAKS_UKURAN = 5 * 1024 * 1024
@@ -37,9 +42,16 @@ export default function RealisasiPage() {
   const { user } = useAuth()
   const { pokja: pokjaList, programPokok } = useData()
   const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([])
-  const [riwayat, setRiwayat] = useState<RealisasiKegiatan[]>([])
+  // Satu state berkunci kegiatan, bukan dua state terpisah. Versi sebelumnya
+  // mengosongkan keduanya lewat setState sinkron di badan efek; dengan kunci ini
+  // data milik kegiatan lain terabaikan sendirinya, termasuk kalau respons
+  // fetch datang terlambat setelah pengguna berpindah kegiatan.
+  const [dataSesi, setDataSesi] = useState<{
+    kegiatanId: number
+    riwayat: RealisasiKegiatan[]
+    jadwal: JadwalKegiatan[]
+  } | null>(null)
   const [selectedKegiatan, setSelectedKegiatan] = useState('')
-  const [jadwalList, setJadwalList] = useState<JadwalKegiatan[]>([])
   const [selectedJadwal, setSelectedJadwal] = useState('')
   // Berisi id realisasi saat pengguna menekan Ubah pada riwayat. Sesi yang
   // sedang diperbaiki tetap boleh dipilih; sesi lain yang sudah terisi tidak.
@@ -61,16 +73,22 @@ export default function RealisasiPage() {
   }, [user])
 
   useEffect(() => {
-    if (!selectedKegiatan) { setRiwayat([]); setJadwalList([]); return }
+    if (!selectedKegiatan) return
     const kegiatanId = parseInt(selectedKegiatan)
+    let dibatalkan = false
     Promise.all([
       fetchRealisasi({ kegiatanId, tahun: CURRENT_YEAR }),
       fetchJadwal({ kegiatanId, tahun: CURRENT_YEAR }),
     ]).then(([r, j]) => {
-      setRiwayat(r.sort((a, b) => a.bulan - b.bulan))
-      setJadwalList(j)
+      if (!dibatalkan) setDataSesi({ kegiatanId, riwayat: r.sort((a, b) => a.bulan - b.bulan), jadwal: j })
     })
+    return () => { dibatalkan = true }
   }, [selectedKegiatan])
+
+  // Hanya pakai data yang memang milik kegiatan yang sedang dipilih.
+  const sesiCocok = dataSesi !== null && String(dataSesi.kegiatanId) === selectedKegiatan
+  const riwayat = sesiCocok ? dataSesi.riwayat : TANPA_RIWAYAT
+  const jadwalList = sesiCocok ? dataSesi.jadwal : TANPA_JADWAL
 
   const selectedKegiatanData = kegiatanList.find(k => k.id === parseInt(selectedKegiatan))
 
@@ -234,7 +252,11 @@ export default function RealisasiPage() {
       setAnggaranAktual('')
       setFiles([])
       const updated = await fetchRealisasi({ kegiatanId: parseInt(selectedKegiatan), tahun: CURRENT_YEAR })
-      setRiwayat(updated.sort((a, b) => a.bulan - b.bulan))
+      setDataSesi({
+        kegiatanId: parseInt(selectedKegiatan),
+        riwayat: updated.sort((a, b) => a.bulan - b.bulan),
+        jadwal: jadwalList,
+      })
     } catch (err) {
       console.error(err)
       toast.error('Gagal menyimpan realisasi. Coba lagi.')

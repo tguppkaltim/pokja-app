@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
-import { useAuth } from '@/contexts/AuthContext'
-import { useData } from '@/contexts/DataContext'
+import { useAuth } from '@/contexts/auth-context'
+import { useData } from '@/contexts/data-context'
 import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan } from '@/lib/db'
 import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -76,12 +76,16 @@ export default function KegiatanFormPage() {
           })
         }
       }).finally(() => setIsLoading(false))
-    } else if (user?.role === 'operator' && user.pokja_id) {
-      setForm(prev => ({ ...prev, pokja_id: String(user.pokja_id) }))
     }
-  }, [isEdit, id, user])
+  }, [isEdit, id])
 
-  const filteredProgram = programPokok.filter(p => form.pokja_id ? p.pokja_id === parseInt(form.pokja_id) : true)
+  // Operator terkunci ke pokjanya sendiri. Diturunkan, bukan disalin ke state
+  // lewat efek: menyalinnya berarti setState sinkron di badan efek, dan nilainya
+  // bisa tertinggal saat user berubah.
+  const pokjaTerkunci = user?.role === 'operator' && user.pokja_id ? String(user.pokja_id) : ''
+  const pokjaAktif = form.pokja_id || pokjaTerkunci
+
+  const filteredProgram = programPokok.filter(p => pokjaAktif ? p.pokja_id === parseInt(pokjaAktif) : true)
   const pokjaOptions = user?.role === 'operator' && user.pokja_id
     ? pokjaList.filter(p => p.id === user.pokja_id)
     : pokjaList
@@ -109,7 +113,7 @@ export default function KegiatanFormPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.pokja_id || !form.program_pokok_id || !form.nama_kegiatan) {
+    if (!pokjaAktif || !form.program_pokok_id || !form.nama_kegiatan) {
       toast.error('Pokja, Program Pokok, dan Nama Kegiatan wajib diisi.')
       return
     }
@@ -125,7 +129,7 @@ export default function KegiatanFormPage() {
     setIsSaving(true)
     try {
       const payload = {
-        pokja_id: parseInt(form.pokja_id),
+        pokja_id: parseInt(pokjaAktif),
         program_pokok_id: parseInt(form.program_pokok_id),
         nama_kegiatan: form.nama_kegiatan,
         sasaran: form.sasaran,
@@ -178,7 +182,7 @@ export default function KegiatanFormPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
-                <Select items={pokjaItems} value={form.pokja_id} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))} disabled={user?.role === 'operator'}>
+                <Select items={pokjaItems} value={pokjaAktif} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))} disabled={user?.role === 'operator'}>
                   <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
                     {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}

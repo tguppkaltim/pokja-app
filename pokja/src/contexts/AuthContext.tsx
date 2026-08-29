@@ -1,53 +1,54 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import type { User } from '@/types'
 import { supabase } from '@/lib/supabase'
-
-interface AuthContextValue {
-  user: User | null
-  login: (email: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-  isLoading: boolean
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { AuthContext } from '@/contexts/auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Didefinisikan di dalam efek: satu-satunya pemakainya adalah efek ini, dan
+    // seluruh setState terjadi di dalam callback asinkron — bukan langsung di
+    // badan efek, yang memicu render beruntun.
+    let dibatalkan = false
+
+    async function muatProfil(userId: string) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (dibatalkan) return
+      if (!error && data) setUser(data as User)
+      setIsLoading(false)
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (dibatalkan) return
       if (session?.user) {
-        fetchProfile(session.user.id)
+        muatProfil(session.user.id)
       } else {
         setIsLoading(false)
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (dibatalkan) return
       if (session?.user) {
-        fetchProfile(session.user.id)
+        muatProfil(session.user.id)
       } else {
         setUser(null)
         setIsLoading(false)
       }
     })
 
-    return () => subscription.unsubscribe()
-  }, [])
-
-  async function fetchProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (!error && data) {
-      setUser(data as User)
+    return () => {
+      dibatalkan = true
+      subscription.unsubscribe()
     }
-    setIsLoading(false)
-  }
+  }, [])
 
   async function login(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -63,10 +64,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
-  return ctx
 }

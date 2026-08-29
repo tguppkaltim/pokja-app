@@ -12,8 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { useAuth } from '@/contexts/AuthContext'
-import { useData } from '@/contexts/DataContext'
+import { useAuth } from '@/contexts/auth-context'
+import { useData } from '@/contexts/data-context'
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Administrator',

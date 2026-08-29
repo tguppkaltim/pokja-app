@@ -9,7 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { useData } from '@/contexts/DataContext'
+import { useData } from '@/contexts/data-context'
 import { fetchProfiles, updateProfile } from '@/lib/db'
 import { supabase } from '@/lib/supabase'
 import type { User } from '@/types'
