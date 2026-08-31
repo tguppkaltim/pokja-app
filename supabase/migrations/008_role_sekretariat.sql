@@ -1,14 +1,14 @@
 -- Menambahkan role sekretariat.
 --
--- BERDIRI SENDIRI, JANGAN DIGABUNG DENGAN MIGRASI 009.
--- Postgres melarang nilai enum baru dipakai di transaksi yang sama dengan
--- statement yang menambahkannya. Menggabungkan berkas ini dengan 009 — yang
--- policy-nya menyebut 'sekretariat' — akan gagal dengan
--- "unsafe use of new value of enum type".
+-- BERKAS INI HANYA BOLEH BERISI SATU STATEMENT DI BAWAH.
 --
--- Jalankan berkas ini sampai selesai, baru jalankan 009.
+-- Postgres melarang nilai enum baru DIPAKAI di transaksi yang sama dengan
+-- statement yang menambahkannya. "Dipakai" termasuk sekadar membacanya:
+-- menambahkan `select enum_range(null::user_role)` sebagai verifikasi di sini
+-- akan menggagalkan seluruh berkas dengan
+--   55P04: unsafe use of new value "sekretariat" of enum type user_role
+--
+-- Jadi jangan menambahkan statement apa pun ke berkas ini. Verifikasi dan
+-- pemakaiannya ada di migrasi 009, yang dijalankan setelah ini selesai.
 
 alter type user_role add value if not exists 'sekretariat';
-
--- Verifikasi: harus memuat sekretariat
-select enum_range(null::user_role) as nilai_role;

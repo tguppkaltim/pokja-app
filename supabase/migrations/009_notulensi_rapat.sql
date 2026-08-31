@@ -105,7 +105,10 @@ create policy "tindak_lanjut_manage" on tindak_lanjut for all to authenticated
   );
 
 -- ── Verifikasi ──────────────────────────────────────────────────────────────
+-- enum_range dipanggil di sini, bukan di 008: membaca nilai enum di transaksi
+-- yang sama dengan yang menambahkannya ditolak Postgres.
 select
+  (select enum_range(null::user_role)::text) as nilai_role,
   (select count(*) from pg_policies where tablename = 'rapat') as policy_rapat,
   (select count(*) from pg_policies where tablename = 'tindak_lanjut') as policy_tindak_lanjut,
   (select count(*) from rapat) as jumlah_rapat,
