@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Plus, Trash2, CalendarDays, Users, AlertTriangle, ImageIcon, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Trash2, CalendarDays, Users, AlertTriangle, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,24 +18,23 @@ import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import {
   fetchRapatById, fetchTindakLanjut, createTindakLanjut, updateTindakLanjut,
-  deleteTindakLanjut, deleteRapat, uploadFotoTindakLanjut, getFotoUrl,
+  deleteTindakLanjut, deleteRapat, getFotoUrl, fetchProgres, tambahProgres,
 } from '@/lib/db'
+import { ProgresDialog } from '@/components/progres-dialog'
 import { formatTanggalPanjang, toTanggalLokal, dariTanggalLokal } from '@/lib/utils'
 import {
-  STATUS_LABEL, STATUS_BADGE, STATUS_ITEMS, terlambat, labelPic,
+  STATUS_LABEL, STATUS_BADGE, terlambat, labelPic,
   picItems, picKeValue, valueKePic, bolehUbah, PIC_SEKRETARIAT,
 } from '@/lib/tindak-lanjut'
-import type { Rapat, TindakLanjut, StatusTindakLanjut } from '@/types'
+import type { Rapat, TindakLanjut, ProgresTindakLanjut } from '@/types'
 import { toast } from 'sonner'
 
-const MAKS_FOTO = 5 * 1024 * 1024
-const TIPE_FOTO = ['.jpg', '.jpeg', '.png', '.webp']
-
+// Status dan foto sengaja tidak ada di sini: keduanya hanya berubah lewat
+// entri progres, supaya tidak ada perubahan status yang lolos tanpa riwayat.
 const formKosong = {
   uraian: '',
   picValue: PIC_SEKRETARIAT,
   target: undefined as Date | undefined,
-  status: 'open' as StatusTindakLanjut,
   keterangan: '',
 }
 
@@ -51,8 +50,9 @@ export default function RapatDetailPage() {
   const [dialogTerbuka, setDialogTerbuka] = useState(false)
   const [editing, setEditing] = useState<TindakLanjut | null>(null)
   const [form, setForm] = useState({ ...formKosong })
-  const [foto, setFoto] = useState<File | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [progres, setProgres] = useState<ProgresTindakLanjut[]>([])
+  const [progresUntuk, setProgresUntuk] = useState<TindakLanjut | null>(null)
 
   const bolehKelola = user?.role === 'super_admin' || user?.role === 'sekretariat'
 
@@ -60,21 +60,22 @@ export default function RapatDetailPage() {
     if (!id) return
     const rapatId = parseInt(id)
     let dibatalkan = false
-    Promise.all([fetchRapatById(rapatId), fetchTindakLanjut({ rapatId })])
-      .then(([r, t]) => { if (!dibatalkan) { setRapat(r); setDaftar(t) } })
+    Promise.all([fetchRapatById(rapatId), fetchTindakLanjut({ rapatId }), fetchProgres()])
+      .then(([r, t, p]) => { if (!dibatalkan) { setRapat(r); setDaftar(t); setProgres(p) } })
       .finally(() => { if (!dibatalkan) setIsLoading(false) })
     return () => { dibatalkan = true }
   }, [id])
 
   async function muatUlang() {
     if (!id) return
-    setDaftar(await fetchTindakLanjut({ rapatId: parseInt(id) }))
+    const [t, p] = await Promise.all([fetchTindakLanjut({ rapatId: parseInt(id) }), fetchProgres()])
+    setDaftar(t)
+    setProgres(p)
   }
 
   function bukaTambah() {
     setEditing(null)
     setForm({ ...formKosong })
-    setFoto(null)
     setDialogTerbuka(true)
   }
 
@@ -84,54 +85,45 @@ export default function RapatDetailPage() {
       uraian: t.uraian,
       picValue: picKeValue(t),
       target: t.target_closed ? dariTanggalLokal(t.target_closed) : undefined,
-      status: t.status,
       keterangan: t.keterangan,
     })
-    setFoto(null)
     setDialogTerbuka(true)
   }
 
-  function pilihFoto(f: File | null) {
-    if (!f) { setFoto(null); return }
-    const ekstensi = f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
-    if (!TIPE_FOTO.includes(ekstensi)) { toast.error('Format foto harus JPG, PNG, atau WEBP.'); return }
-    if (f.size > MAKS_FOTO) { toast.error('Ukuran foto maksimum 5 MB.'); return }
-    setFoto(f)
-  }
+
 
   async function simpan() {
     if (!form.uraian.trim()) { toast.error('Uraian tindak lanjut wajib diisi.'); return }
-    if (!id) return
+    if (!id || !user) return
 
     setIsSaving(true)
     try {
-      const dasar = {
+      const definisi = {
         ...valueKePic(form.picValue),
         uraian: form.uraian.trim(),
         target_closed: form.target ? toTanggalLokal(form.target) : null,
-        status: form.status,
         keterangan: form.keterangan.trim(),
       }
 
-      let tindakLanjutId: number
       if (editing) {
-        await updateTindakLanjut(editing.id, dasar)
-        tindakLanjutId = editing.id
+        await updateTindakLanjut(editing.id, definisi)
       } else {
         const dibuat = await createTindakLanjut({
           rapat_id: parseInt(id),
           open_date: toTanggalLokal(new Date()),
+          status: 'open',
           closed_date: null,
           foto_path: null,
-          ...dasar,
+          ...definisi,
         })
-        tindakLanjutId = dibuat.id
-      }
-
-      // Foto diunggah setelah barisnya ada, karena path memuat id-nya.
-      if (foto) {
-        const path = await uploadFotoTindakLanjut(foto, tindakLanjutId)
-        await updateTindakLanjut(tindakLanjutId, { foto_path: path })
+        // Entri pembuka supaya riwayatnya tidak kosong sejak awal.
+        await tambahProgres({
+          tindak_lanjut_id: dibuat.id,
+          status_baru: 'open',
+          catatan: 'Tindak lanjut dibuat.',
+          foto_path: null,
+          dibuat_oleh: user.id,
+        })
       }
 
       toast.success(editing ? 'Tindak lanjut diperbarui.' : 'Tindak lanjut ditambahkan.')
@@ -143,6 +135,7 @@ export default function RapatDetailPage() {
       setIsSaving(false)
     }
   }
+
 
   async function hapus(t: TindakLanjut) {
     try {
@@ -305,11 +298,11 @@ export default function RapatDetailPage() {
 
                 {t.keterangan && <p className="text-xs text-gray-600 bg-[#F6FBF7] rounded px-3 py-2">{t.keterangan}</p>}
 
-                {t.foto_path && (
-                  <a href={getFotoUrl(t.foto_path)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-[#2E8B57] hover:underline">
-                    <ImageIcon className="w-3.5 h-3.5" /> Lihat foto bukti
-                  </a>
-                )}
+                <RiwayatProgres
+                  entri={progres.filter(p => p.tindak_lanjut_id === t.id)}
+                  bolehTambah={dapatDiubah}
+                  onTambah={() => setProgresUntuk(t)}
+                />
               </div>
             )
           })}
@@ -367,17 +360,6 @@ export default function RapatDetailPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select items={STATUS_ITEMS} value={form.status} onValueChange={v => v && setForm(p => ({ ...p, status: v as StatusTindakLanjut }))}>
-                <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUS_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-400">Tanggal selesai terisi otomatis saat status jadi Closed.</p>
-            </div>
-
-            <div className="space-y-1.5">
               <Label>Keterangan</Label>
               <Textarea
                 placeholder="Catatan tambahan..."
@@ -385,36 +367,11 @@ export default function RapatDetailPage() {
                 onChange={e => setForm(p => ({ ...p, keterangan: e.target.value }))}
                 className="border-[#d1e8d5] min-h-16"
               />
+              <p className="text-xs text-gray-400">
+                Status dan foto bukti diisi lewat Tambah Progress, supaya perubahannya tercatat di riwayat.
+              </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Foto Bukti <span className="text-xs font-normal text-gray-400">(opsional)</span></Label>
-              {foto ? (
-                <div className="flex items-center gap-3 bg-[#F6FBF7] border border-[#d1e8d5] rounded-lg px-3 py-2">
-                  <ImageIcon className="w-4 h-4 text-[#2E8B57] shrink-0" />
-                  <span className="text-sm text-gray-700 flex-1 truncate">{foto.name}</span>
-                  <span className="text-xs text-gray-400">{(foto.size / 1024).toFixed(0)} KB</span>
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="Hapus foto" onClick={() => setFoto(null)} className="text-gray-400 hover:bg-red-50 hover:text-red-500">
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <label className="flex items-center justify-center w-full h-16 border-2 border-dashed border-[#52B788] rounded-lg cursor-pointer hover:bg-[#EAF5EC]/50 transition-colors">
-                  <span className="text-sm text-[#2E8B57]">Pilih foto — JPG, PNG, WEBP. Maks 5 MB.</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept={TIPE_FOTO.join(',')}
-                    onChange={e => { pilihFoto(e.target.files?.[0] ?? null); e.target.value = '' }}
-                  />
-                </label>
-              )}
-              {editing?.foto_path && !foto && (
-                <p className="text-xs text-gray-400">
-                  Sudah ada foto tersimpan. Memilih foto baru akan menambahkannya, tidak menimpa yang lama.
-                </p>
-              )}
-            </div>
           </div>
 
           <DialogFooter>
@@ -425,6 +382,63 @@ export default function RapatDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {progresUntuk && (
+        <ProgresDialog
+          key={progresUntuk.id}
+          tindakLanjut={progresUntuk}
+          userId={user?.id ?? ''}
+          onTutup={() => setProgresUntuk(null)}
+          onSaved={muatUlang}
+        />
+      )}
+    </div>
+  )
+}
+
+function RiwayatProgres({
+  entri,
+  bolehTambah,
+  onTambah,
+}: {
+  entri: ProgresTindakLanjut[]
+  bolehTambah: boolean
+  onTambah: () => void
+}) {
+  return (
+    <div className="border-t border-[#EAF5EC] pt-3 mt-1">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-gray-500">Riwayat Progress ({entri.length})</p>
+        {bolehTambah && (
+          <Button variant="ghost" size="xs" onClick={onTambah} className="text-[#1B6B35] hover:bg-[#EAF5EC]">
+            <Plus className="w-3 h-3 mr-1" /> Tambah Progress
+          </Button>
+        )}
+      </div>
+
+      {entri.length === 0 && <p className="text-xs text-gray-400">Belum ada catatan progress.</p>}
+
+      <ol className="space-y-2">
+        {entri.map(e => (
+          <li key={e.id} className="relative pl-4 text-xs">
+            <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-[#52B788]" />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-400">
+                {new Date(e.created_at).toLocaleString('id-ID', {
+                  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+              <Badge className={`text-xs ${STATUS_BADGE[e.status_baru]}`}>{STATUS_LABEL[e.status_baru]}</Badge>
+            </div>
+            {e.catatan && <p className="text-gray-600 mt-0.5">{e.catatan}</p>}
+            {e.foto_path && (
+              <a href={getFotoUrl(e.foto_path)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#2E8B57] hover:underline mt-0.5">
+                <ImageIcon className="w-3 h-3" /> Lihat foto
+              </a>
+            )}
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }

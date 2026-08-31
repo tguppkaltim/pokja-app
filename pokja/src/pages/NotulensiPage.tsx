@@ -10,13 +10,13 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
-import { fetchRapat, fetchTindakLanjut, updateTindakLanjut } from '@/lib/db'
+import { fetchRapat, fetchTindakLanjut } from '@/lib/db'
+import { ProgresDialog } from '@/components/progres-dialog'
 import { formatTanggalPanjang, formatTanggalPendek } from '@/lib/utils'
 import {
   STATUS_LABEL, STATUS_BADGE, STATUS_ITEMS, terlambat, labelPic, picItems, picKeValue, bolehUbah,
 } from '@/lib/tindak-lanjut'
 import type { Rapat, TindakLanjut, StatusTindakLanjut } from '@/types'
-import { toast } from 'sonner'
 
 export default function NotulensiPage() {
   const { user } = useAuth()
@@ -28,6 +28,10 @@ export default function NotulensiPage() {
   const [cari, setCari] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPic, setFilterPic] = useState('all')
+  // Ubah status selalu lewat dialog progres: tidak boleh ada jalur yang
+  // mengubah status tanpa meninggalkan riwayat.
+  const [progresUntuk, setProgresUntuk] = useState<TindakLanjut | null>(null)
+  const [statusDipilih, setStatusDipilih] = useState<StatusTindakLanjut | undefined>(undefined)
 
   const bolehKelola = user?.role === 'super_admin' || user?.role === 'sekretariat'
 
@@ -62,18 +66,13 @@ export default function NotulensiPage() {
     terlambat: tindakLanjut.filter(t => terlambat(t)).length,
   }), [tindakLanjut])
 
-  async function gantiStatus(t: TindakLanjut, status: StatusTindakLanjut) {
-    const sebelum = tindakLanjut
-    // Perbarui tampilan lebih dulu supaya dropdown terasa responsif; kalau
-    // database menolak, dikembalikan ke keadaan semula.
-    setTindakLanjut(prev => prev.map(x => x.id === t.id ? { ...x, status } : x))
-    try {
-      await updateTindakLanjut(t.id, { status })
-      setTindakLanjut(await fetchTindakLanjut())
-    } catch {
-      setTindakLanjut(sebelum)
-      toast.error('Gagal mengubah status. Kamu mungkin tidak berhak mengubah tindak lanjut ini.')
-    }
+  function bukaProgres(t: TindakLanjut, status: StatusTindakLanjut) {
+    setStatusDipilih(status)
+    setProgresUntuk(t)
+  }
+
+  async function muatUlang() {
+    setTindakLanjut(await fetchTindakLanjut())
   }
 
   function hitungRapat(rapatId: number) {
@@ -229,7 +228,7 @@ export default function NotulensiPage() {
                         <TableCell className="px-4 py-3">
                           <div className="flex flex-col gap-1 items-start">
                             {dapatDiubah ? (
-                              <Select items={STATUS_ITEMS} value={t.status} onValueChange={v => v && gantiStatus(t, v as StatusTindakLanjut)}>
+                              <Select items={STATUS_ITEMS} value={t.status} onValueChange={v => v && bukaProgres(t, v as StatusTindakLanjut)}>
                                 <SelectTrigger size="sm" className="w-32 border-[#d1e8d5]"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {STATUS_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
@@ -264,6 +263,17 @@ export default function NotulensiPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {progresUntuk && (
+        <ProgresDialog
+          key={`${progresUntuk.id}-${statusDipilih ?? ''}`}
+          tindakLanjut={progresUntuk}
+          statusAwal={statusDipilih}
+          userId={user?.id ?? ''}
+          onTutup={() => setProgresUntuk(null)}
+          onSaved={muatUlang}
+        />
+      )}
     </div>
   )
 }

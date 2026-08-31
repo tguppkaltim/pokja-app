@@ -258,6 +258,36 @@ export interface Database {
         }
         Relationships: []
       }
+      progres_tindak_lanjut: {
+        Row: {
+          id: number
+          tindak_lanjut_id: number
+          status_baru: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+          catatan: string
+          foto_path: string | null
+          dibuat_oleh: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          tindak_lanjut_id: number
+          status_baru: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+          catatan?: string
+          foto_path?: string | null
+          dibuat_oleh: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          tindak_lanjut_id?: number
+          status_baru?: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+          catatan?: string
+          foto_path?: string | null
+          dibuat_oleh?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       evidence_files: {
         Row: {
           id: number

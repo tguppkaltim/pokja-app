@@ -101,8 +101,22 @@ export interface TindakLanjut {
   closed_date: string | null
   status: StatusTindakLanjut
   keterangan: string
-  /** Path di bucket `evidence`. Opsional. */
+  /**
+   * @deprecated Foto pindah ke ProgresTindakLanjut sejak migrasi 010.
+   * Kolomnya belum di-drop; jangan ditulis lagi.
+   */
   foto_path: string | null
   created_at: string
   updated_at: string | null
+}
+
+export interface ProgresTindakLanjut {
+  id: number
+  tindak_lanjut_id: number
+  status_baru: StatusTindakLanjut
+  catatan: string
+  /** Path di bucket `evidence`. Opsional. */
+  foto_path: string | null
+  dibuat_oleh: string
+  created_at: string
 }

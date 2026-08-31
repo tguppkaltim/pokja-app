@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
-import type { Rapat, TindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
-import { formatTanggalPanjang, toTanggalLokal } from '@/lib/utils'
+import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import { formatTanggalPanjang } from '@/lib/utils'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
 
@@ -220,10 +220,19 @@ export async function fetchTindakLanjut(opts?: { rapatId?: number }): Promise<Ti
 
 type TindakLanjutBaru = Omit<TindakLanjut, 'id' | 'created_at' | 'updated_at'>
 
+/**
+ * Definisi tindak lanjut — tanpa status dan closed_date.
+ *
+ * Keduanya hanya boleh berubah lewat tambahProgres(), supaya tidak ada
+ * perubahan status yang lolos tanpa tercatat di riwayat. Riwayat yang bocor
+ * lebih berbahaya daripada tidak ada riwayat, karena terlihat seolah lengkap.
+ */
+type DefinisiTindakLanjut = Omit<TindakLanjutBaru, 'status' | 'closed_date' | 'foto_path'>
+
 export async function createTindakLanjut(data: TindakLanjutBaru): Promise<TindakLanjut> {
   const { data: hasil, error } = await supabase
     .from('tindak_lanjut')
-    .insert(selaraskanClosedDate(data))
+    .insert(data)
     .select()
     .single()
   if (error) throw error
@@ -232,11 +241,11 @@ export async function createTindakLanjut(data: TindakLanjutBaru): Promise<Tindak
 
 export async function updateTindakLanjut(
   id: number,
-  data: Partial<TindakLanjutBaru>
+  data: Partial<DefinisiTindakLanjut>
 ): Promise<void> {
   const { error } = await supabase
     .from('tindak_lanjut')
-    .update({ ...selaraskanClosedDate(data), updated_at: new Date().toISOString() })
+    .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
 }
@@ -246,17 +255,43 @@ export async function deleteTindakLanjut(id: number): Promise<void> {
   if (error) throw error
 }
 
+
+// ─── Riwayat progress ─────────────────────────────────────────────────────────
+
+export async function fetchProgres(opts?: { tindakLanjutId?: number }): Promise<ProgresTindakLanjut[]> {
+  let q = supabase.from('progres_tindak_lanjut').select('*').order('created_at')
+  if (opts?.tindakLanjutId) q = q.eq('tindak_lanjut_id', opts.tindakLanjutId)
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
 /**
- * closed_date dikelola aplikasi, bukan diisi manual: terisi saat status jadi
- * closed, dikosongkan saat status berpindah dari closed. Tanpa ini bisa muncul
- * baris "Open tapi punya tanggal selesai" yang membingungkan saat monitoring.
+ * Satu-satunya jalur yang mengubah status tindak lanjut.
+ *
+ * Trigger `trg_sync_status_dari_progres` di database menyalin status_baru ke
+ * tindak_lanjut dan mengurus closed_date, jadi keduanya tidak mungkin melenceng
+ * dari riwayatnya.
  */
-function selaraskanClosedDate<T extends { status?: string; closed_date?: string | null }>(data: T): T {
-  if (data.status === undefined) return data
-  if (data.status === 'closed') {
-    return { ...data, closed_date: data.closed_date ?? toTanggalLokal(new Date()) }
-  }
-  return { ...data, closed_date: null }
+export async function tambahProgres(data: {
+  tindak_lanjut_id: number
+  status_baru: TindakLanjut['status']
+  catatan: string
+  foto_path: string | null
+  dibuat_oleh: string
+}): Promise<ProgresTindakLanjut> {
+  const { data: hasil, error } = await supabase
+    .from('progres_tindak_lanjut')
+    .insert(data)
+    .select()
+    .single()
+  if (error) throw error
+  return hasil
+}
+
+export async function deleteProgres(id: number): Promise<void> {
+  const { error } = await supabase.from('progres_tindak_lanjut').delete().eq('id', id)
+  if (error) throw error
 }
 
 // ─── Foto tindak lanjut ───────────────────────────────────────────────────────
