@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'operator' | 'viewer'
+export type UserRole = 'super_admin' | 'sekretariat' | 'operator' | 'viewer'
 
 export interface User {
   id: string
@@ -73,4 +73,36 @@ export interface EvidenceFile {
   file_size: number
   uploaded_by: string
   uploaded_at: string
+}
+
+export type StatusTindakLanjut = 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+
+export interface Rapat {
+  id: number
+  /** YYYY-MM-DD */
+  tanggal: string
+  judul: string
+  peserta: string
+  ringkasan: string
+  created_by: string
+  created_at: string
+}
+
+export interface TindakLanjut {
+  id: number
+  rapat_id: number
+  uraian: string
+  /** 'pokja' berarti pic_pokja_id terisi; 'sekretariat' berarti null. */
+  pic: 'pokja' | 'sekretariat'
+  pic_pokja_id: number | null
+  open_date: string
+  target_closed: string | null
+  /** Dikelola aplikasi: terisi saat status jadi closed, dikosongkan saat dibatalkan. */
+  closed_date: string | null
+  status: StatusTindakLanjut
+  keterangan: string
+  /** Path di bucket `evidence`. Opsional. */
+  foto_path: string | null
+  created_at: string
+  updated_at: string | null
 }

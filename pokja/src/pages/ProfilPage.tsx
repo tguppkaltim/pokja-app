@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Administrator',
+  sekretariat: 'Sekretariat',
   operator: 'Operator Pokja',
   viewer: 'Viewer / Pimpinan',
 }

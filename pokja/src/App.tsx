@@ -11,6 +11,9 @@ import KegiatanFormPage from '@/pages/KegiatanFormPage'
 import KegiatanDetailPage from '@/pages/KegiatanDetailPage'
 import RealisasiPage from '@/pages/RealisasiPage'
 import LaporanPage from '@/pages/LaporanPage'
+import NotulensiPage from '@/pages/NotulensiPage'
+import RapatFormPage from '@/pages/RapatFormPage'
+import RapatDetailPage from '@/pages/RapatDetailPage'
 import PenggunaPage from '@/pages/admin/PenggunaPage'
 import MasterPokjaPage from '@/pages/admin/MasterPokjaPage'
 import MasterProgramPage from '@/pages/admin/MasterProgramPage'
@@ -54,8 +57,17 @@ function AppRoutes() {
         <Route path="/laporan" element={<LaporanPage />} />
         <Route path="/profil" element={<ProfilPage />} />
 
+        <Route path="/notulensi" element={<NotulensiPage />} />
+        <Route path="/notulensi/tambah" element={
+          <ProtectedRoute roles={['super_admin', 'sekretariat']}><RapatFormPage /></ProtectedRoute>
+        } />
+        <Route path="/notulensi/:id" element={<RapatDetailPage />} />
+        <Route path="/notulensi/:id/edit" element={
+          <ProtectedRoute roles={['super_admin', 'sekretariat']}><RapatFormPage /></ProtectedRoute>
+        } />
+
         <Route path="/kegiatan" element={
-          <ProtectedRoute roles={['super_admin', 'operator']}>
+          <ProtectedRoute roles={['super_admin', 'sekretariat', 'operator']}>
             <KegiatanListPage />
           </ProtectedRoute>
         } />

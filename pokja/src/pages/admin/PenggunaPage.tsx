@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
+  sekretariat: 'Sekretariat',
   operator: 'Operator Pokja',
   viewer: 'Viewer',
 }
@@ -155,7 +156,7 @@ export default function PenggunaPage() {
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{u.email}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge variant="outline" className={u.role === 'super_admin' ? 'border-purple-300 text-purple-600' : u.role === 'operator' ? 'border-[#52B788] text-[#2E8B57]' : 'border-blue-300 text-blue-600'}>
+                      <Badge variant="outline" className={u.role === 'super_admin' ? 'border-purple-300 text-purple-600' : u.role === 'sekretariat' ? 'border-amber-300 text-amber-600' : u.role === 'operator' ? 'border-[#52B788] text-[#2E8B57]' : 'border-blue-300 text-blue-600'}>
                         {ROLE_LABELS[u.role]}
                       </Badge>
                     </TableCell>

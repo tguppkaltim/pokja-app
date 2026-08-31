@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, CheckSquare, FileBarChart,
-  Users, Building2, Layers, ChevronLeft, ChevronRight, LogOut, User
-} from 'lucide-react'
+  Users, Building2, Layers, ChevronLeft, ChevronRight, LogOut, User, NotebookPen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
@@ -16,10 +15,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'operator', 'viewer'] },
-  { label: 'Rencana Kegiatan', path: '/kegiatan', icon: ClipboardList, roles: ['super_admin', 'operator'] },
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'sekretariat', 'operator', 'viewer'] },
+  // Sekretariat bukan pokja, jadi hanya membaca Rencana Kegiatan — tombol ubah
+  // di halaman itu memang sudah dibatasi super_admin dan operator.
+  { label: 'Rencana Kegiatan', path: '/kegiatan', icon: ClipboardList, roles: ['super_admin', 'sekretariat', 'operator'] },
   { label: 'Input Realisasi', path: '/realisasi', icon: CheckSquare, roles: ['super_admin', 'operator'] },
-  { label: 'Laporan', path: '/laporan', icon: FileBarChart, roles: ['super_admin', 'operator', 'viewer'] },
+  { label: 'Notulensi', path: '/notulensi', icon: NotebookPen, roles: ['super_admin', 'sekretariat', 'operator', 'viewer'] },
+  { label: 'Laporan', path: '/laporan', icon: FileBarChart, roles: ['super_admin', 'sekretariat', 'operator', 'viewer'] },
 ]
 
 const adminItems: NavItem[] = [

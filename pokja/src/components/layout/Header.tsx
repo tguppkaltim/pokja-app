@@ -17,12 +17,14 @@ import { useData } from '@/contexts/data-context'
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Administrator',
+  sekretariat: 'Sekretariat',
   operator: 'Operator Pokja',
   viewer: 'Viewer',
 }
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
+  sekretariat: 'bg-amber-100 text-amber-700 border-amber-200',
   operator: 'bg-[#EAF5EC] text-[#1B6B35] border-[#c5e3cc]',
   viewer: 'bg-blue-100 text-blue-700 border-blue-200',
 }

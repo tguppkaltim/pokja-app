@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
-import type { JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
-import { formatTanggalPanjang } from '@/lib/utils'
+import type { Rapat, TindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import { formatTanggalPanjang, toTanggalLokal } from '@/lib/utils'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
 
@@ -176,6 +176,100 @@ export async function upsertRealisasi(data: {
     .single()
   if (error) throw error
   return result
+}
+
+// ─── Notulensi rapat ──────────────────────────────────────────────────────────
+
+export async function fetchRapat(): Promise<Rapat[]> {
+  const { data, error } = await supabase.from('rapat').select('*').order('tanggal', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function fetchRapatById(id: number): Promise<Rapat | null> {
+  const { data, error } = await supabase.from('rapat').select('*').eq('id', id).single()
+  if (error) return null
+  return data
+}
+
+export async function createRapat(data: Omit<Rapat, 'id' | 'created_at'>): Promise<Rapat> {
+  const { data: hasil, error } = await supabase.from('rapat').insert(data).select().single()
+  if (error) throw error
+  return hasil
+}
+
+export async function updateRapat(id: number, data: Partial<Omit<Rapat, 'id' | 'created_at'>>): Promise<void> {
+  const { error } = await supabase.from('rapat').update(data).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteRapat(id: number): Promise<void> {
+  const { error } = await supabase.from('rapat').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Tindak lanjut ────────────────────────────────────────────────────────────
+
+export async function fetchTindakLanjut(opts?: { rapatId?: number }): Promise<TindakLanjut[]> {
+  let q = supabase.from('tindak_lanjut').select('*').order('id')
+  if (opts?.rapatId) q = q.eq('rapat_id', opts.rapatId)
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
+type TindakLanjutBaru = Omit<TindakLanjut, 'id' | 'created_at' | 'updated_at'>
+
+export async function createTindakLanjut(data: TindakLanjutBaru): Promise<TindakLanjut> {
+  const { data: hasil, error } = await supabase
+    .from('tindak_lanjut')
+    .insert(selaraskanClosedDate(data))
+    .select()
+    .single()
+  if (error) throw error
+  return hasil
+}
+
+export async function updateTindakLanjut(
+  id: number,
+  data: Partial<TindakLanjutBaru>
+): Promise<void> {
+  const { error } = await supabase
+    .from('tindak_lanjut')
+    .update({ ...selaraskanClosedDate(data), updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteTindakLanjut(id: number): Promise<void> {
+  const { error } = await supabase.from('tindak_lanjut').delete().eq('id', id)
+  if (error) throw error
+}
+
+/**
+ * closed_date dikelola aplikasi, bukan diisi manual: terisi saat status jadi
+ * closed, dikosongkan saat status berpindah dari closed. Tanpa ini bisa muncul
+ * baris "Open tapi punya tanggal selesai" yang membingungkan saat monitoring.
+ */
+function selaraskanClosedDate<T extends { status?: string; closed_date?: string | null }>(data: T): T {
+  if (data.status === undefined) return data
+  if (data.status === 'closed') {
+    return { ...data, closed_date: data.closed_date ?? toTanggalLokal(new Date()) }
+  }
+  return { ...data, closed_date: null }
+}
+
+// ─── Foto tindak lanjut ───────────────────────────────────────────────────────
+
+export async function uploadFotoTindakLanjut(file: File, tindakLanjutId: number): Promise<string> {
+  const path = `tindak-lanjut/${tindakLanjutId}/${Date.now()}_${file.name}`
+  const { error } = await supabase.storage.from('evidence').upload(path, file)
+  if (error) throw error
+  return path
+}
+
+export function getFotoUrl(path: string): string {
+  return supabase.storage.from('evidence').getPublicUrl(path).data.publicUrl
 }
 
 // ─── Evidence ────────────────────────────────────────────────────────────────

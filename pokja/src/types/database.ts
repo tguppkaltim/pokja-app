@@ -8,7 +8,7 @@ export interface Database {
           id: string
           full_name: string
           email: string
-          role: 'super_admin' | 'operator' | 'viewer'
+          role: 'super_admin' | 'sekretariat' | 'operator' | 'viewer'
           pokja_id: number | null
           is_active: boolean
           created_at: string
@@ -17,7 +17,7 @@ export interface Database {
           id: string
           full_name: string
           email: string
-          role: 'super_admin' | 'operator' | 'viewer'
+          role: 'super_admin' | 'sekretariat' | 'operator' | 'viewer'
           pokja_id?: number | null
           is_active?: boolean
           created_at?: string
@@ -26,7 +26,7 @@ export interface Database {
           id?: string
           full_name?: string
           email?: string
-          role?: 'super_admin' | 'operator' | 'viewer'
+          role?: 'super_admin' | 'sekretariat' | 'operator' | 'viewer'
           pokja_id?: number | null
           is_active?: boolean
           created_at?: string
@@ -180,6 +180,84 @@ export interface Database {
         }
         Relationships: []
       }
+      rapat: {
+        Row: {
+          id: number
+          tanggal: string
+          judul: string
+          peserta: string
+          ringkasan: string
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          tanggal: string
+          judul: string
+          peserta?: string
+          ringkasan?: string
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          tanggal?: string
+          judul?: string
+          peserta?: string
+          ringkasan?: string
+          created_by?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      tindak_lanjut: {
+        Row: {
+          id: number
+          rapat_id: number
+          uraian: string
+          pic: 'pokja' | 'sekretariat'
+          pic_pokja_id: number | null
+          open_date: string
+          target_closed: string | null
+          closed_date: string | null
+          status: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+          keterangan: string
+          foto_path: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          rapat_id: number
+          uraian: string
+          pic: 'pokja' | 'sekretariat'
+          pic_pokja_id?: number | null
+          open_date?: string
+          target_closed?: string | null
+          closed_date?: string | null
+          status?: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+          keterangan?: string
+          foto_path?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          rapat_id?: number
+          uraian?: string
+          pic?: 'pokja' | 'sekretariat'
+          pic_pokja_id?: number | null
+          open_date?: string
+          target_closed?: string | null
+          closed_date?: string | null
+          status?: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
+          keterangan?: string
+          foto_path?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       evidence_files: {
         Row: {
           id: number
@@ -217,7 +295,8 @@ export interface Database {
     Views: Record<string, never>
     Functions: Record<string, never>
     Enums: {
-      user_role: 'super_admin' | 'operator' | 'viewer'
+      user_role: 'super_admin' | 'sekretariat' | 'operator' | 'viewer'
+      status_tindak_lanjut: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
       status_realisasi: 'terlaksana' | 'tidak_terlaksana'
     }
   }
