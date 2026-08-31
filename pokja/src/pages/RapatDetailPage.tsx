@@ -431,14 +431,44 @@ function RiwayatProgres({
               <Badge className={`text-xs ${STATUS_BADGE[e.status_baru]}`}>{STATUS_LABEL[e.status_baru]}</Badge>
             </div>
             {e.catatan && <p className="text-gray-600 mt-0.5">{e.catatan}</p>}
-            {e.foto_path && (
-              <a href={getFotoUrl(e.foto_path)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#2E8B57] hover:underline mt-0.5">
-                <ImageIcon className="w-3 h-3" /> Lihat foto
-              </a>
-            )}
+            {e.foto_path && <TautanFoto path={e.foto_path} />}
           </li>
         ))}
       </ol>
     </div>
+  )
+}
+
+/**
+ * URL bertanda tangan hanya bisa didapat secara asinkron, sedangkan popup
+ * blocker menolak window.open yang dipanggil setelah await. Jadi tabnya dibuka
+ * lebih dulu saat klik, baru diarahkan ketika URL-nya siap.
+ */
+function TautanFoto({ path }: { path: string }) {
+  const [membuka, setMembuka] = useState(false)
+
+  async function buka() {
+    setMembuka(true)
+    const tab = window.open('', '_blank')
+    try {
+      const url = await getFotoUrl(path)
+      if (tab) tab.location.href = url
+    } catch {
+      tab?.close()
+      toast.error('Gagal membuka foto.')
+    } finally {
+      setMembuka(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={buka}
+      disabled={membuka}
+      className="inline-flex items-center gap-1 text-[#2E8B57] hover:underline mt-0.5 disabled:opacity-50"
+    >
+      <ImageIcon className="w-3 h-3" /> {membuka ? 'Membuka...' : 'Lihat foto'}
+    </button>
   )
 }

@@ -303,8 +303,15 @@ export async function uploadFotoTindakLanjut(file: File, tindakLanjutId: number)
   return path
 }
 
-export function getFotoUrl(path: string): string {
-  return supabase.storage.from('evidence').getPublicUrl(path).data.publicUrl
+/**
+ * Bucket `evidence` bersifat private, jadi getPublicUrl() mengembalikan 400.
+ * URL bertanda tangan berlaku sementara dan hanya bisa dibuat oleh sesi yang
+ * berhak, sehingga foto bukti tidak bisa diakses tanpa login.
+ */
+export async function getFotoUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('evidence').createSignedUrl(path, 300)
+  if (error) throw error
+  return data.signedUrl
 }
 
 // ─── Evidence ────────────────────────────────────────────────────────────────
