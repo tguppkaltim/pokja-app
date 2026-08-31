@@ -51,8 +51,11 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-bold leading-tight truncate">TP PKK Kaltim</p>
-            <p className="text-xs text-green-300 truncate">Sistem Monitoring</p>
+            {/* Nama baru lebih panjang dari sebelumnya; `truncate` memotongnya
+                jadi "SIM PKK Kalimantan Ti...". Dibiarkan membungkus dua baris
+                supaya nama lembaganya terbaca utuh. */}
+            <p className="text-sm font-bold leading-tight">SIM PKK Kalimantan Timur</p>
+            <p className="text-xs text-green-300 leading-tight mt-0.5 truncate">Sistem Informasi Manajemen</p>
           </div>
         )}
       </div>
