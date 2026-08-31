@@ -21,6 +21,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single()
 
       if (dibatalkan) return
+
+      // Akun yang dinonaktifkan diblokir di Supabase Auth, tapi access token
+      // yang sudah dipegang tetap sah sampai kedaluwarsa — biasanya sejam.
+      // Tanpa pemeriksaan ini, pengguna yang baru dinonaktifkan masih bisa
+      // bekerja selama sisa waktu itu.
+      if (!error && data && !(data as User).is_active) {
+        await supabase.auth.signOut()
+        setUser(null)
+        setIsLoading(false)
+        return
+      }
+
       if (!error && data) setUser(data as User)
       setIsLoading(false)
     }

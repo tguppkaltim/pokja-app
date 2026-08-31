@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { useData } from '@/contexts/data-context'
 import { fetchProfiles, updateProfile } from '@/lib/db'
-import { supabase } from '@/lib/supabase'
+import { buatPengguna, setAktifPengguna, resetPasswordPengguna } from '@/lib/admin-users'
 import type { User } from '@/types'
 import { toast } from 'sonner'
 
@@ -36,6 +36,10 @@ export default function PenggunaPage() {
   const [editUser, setEditUser] = useState<User | null>(null)
   const [form, setForm] = useState({ full_name: '', email: '', role: 'operator', pokja_id: '', is_active: true })
   const [isSaving, setIsSaving] = useState(false)
+  const [tambahTerbuka, setTambahTerbuka] = useState(false)
+  const [formTambah, setFormTambah] = useState({ full_name: '', email: '', password: '', role: 'operator', pokja_id: '' })
+  const [resetUntuk, setResetUntuk] = useState<User | null>(null)
+  const [passwordBaru, setPasswordBaru] = useState('')
 
   useEffect(() => {
     fetchProfiles().then(setUsers).finally(() => setIsLoading(false))
@@ -77,25 +81,64 @@ export default function PenggunaPage() {
     }
   }
 
+  // Lewat Edge Function, bukan sekadar mengubah kolom is_active: tanpa ban di
+  // Supabase Auth, akun "nonaktif" masih bisa login seperti biasa.
   async function toggleActive(u: User) {
     try {
-      await updateProfile(u.id, { is_active: !u.is_active })
+      await setAktifPengguna(u.id, !u.is_active)
       setUsers(prev => prev.map(p => p.id === u.id ? { ...p, is_active: !p.is_active } : p))
       toast.success(`Akun ${u.full_name} ${u.is_active ? 'dinonaktifkan' : 'diaktifkan kembali'}.`)
-    } catch {
-      toast.error('Gagal mengubah status akun.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mengubah status akun.')
     }
   }
 
-  async function resetPassword(u: User) {
+  async function simpanTambah() {
+    const { full_name, email, password, role, pokja_id } = formTambah
+    if (!full_name.trim() || !email.trim() || !password) {
+      toast.error('Nama, email, dan password wajib diisi.')
+      return
+    }
+    if (password.length < 8) { toast.error('Password minimal 8 karakter.'); return }
+    if (role === 'operator' && !pokja_id) { toast.error('Operator harus memilih Pokja.'); return }
+
+    setIsSaving(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(u.email)
-      if (error) throw error
-      toast.success(`Email reset password dikirim ke ${u.email}.`)
-    } catch {
-      toast.error('Gagal mengirim email reset password.')
+      await buatPengguna({
+        full_name: full_name.trim(),
+        email: email.trim(),
+        password,
+        role: role as User['role'],
+        pokja_id: role === 'operator' ? parseInt(pokja_id) : null,
+      })
+      toast.success(`Akun ${full_name} dibuat. Sampaikan passwordnya ke pengguna.`)
+      setTambahTerbuka(false)
+      setFormTambah({ full_name: '', email: '', password: '', role: 'operator', pokja_id: '' })
+      setUsers(await fetchProfiles())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal membuat akun.')
+    } finally {
+      setIsSaving(false)
     }
   }
+
+  async function simpanReset() {
+    if (!resetUntuk) return
+    if (passwordBaru.length < 8) { toast.error('Password minimal 8 karakter.'); return }
+    setIsSaving(true)
+    try {
+      await resetPasswordPengguna(resetUntuk.id, passwordBaru)
+      toast.success(`Password ${resetUntuk.full_name} berhasil diganti.`)
+      setResetUntuk(null)
+      setPasswordBaru('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mengganti password.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+
 
   function getInitials(name: string) {
     return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
@@ -110,7 +153,7 @@ export default function PenggunaPage() {
           <h1 className="text-2xl font-bold text-[#1B6B35]">Manajemen Pengguna</h1>
           <p className="text-sm text-gray-500 mt-1">Kelola akun pengguna sistem</p>
         </div>
-        <Button onClick={() => toast.info('Tambah pengguna dilakukan via Supabase Dashboard → Authentication → Users.')} className="bg-[#1B6B35] hover:bg-[#134D26]">
+        <Button onClick={() => setTambahTerbuka(true)} className="bg-[#1B6B35] hover:bg-[#134D26]">
           <Plus className="w-4 h-4 mr-1" /> Tambah Pengguna
         </Button>
       </div>
@@ -169,7 +212,7 @@ export default function PenggunaPage() {
                         <Button variant="ghost" size="icon" aria-label="Ubah pengguna" onClick={() => openEdit(u)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" aria-label="Reset password" title="Reset Password" onClick={() => resetPassword(u)} className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
+                        <Button variant="ghost" size="icon" aria-label="Reset password" title="Reset Password" onClick={() => { setResetUntuk(u); setPasswordBaru('') }} className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
                           <KeyRound className="w-4 h-4" />
                         </Button>
                         <Button
@@ -236,6 +279,83 @@ export default function PenggunaPage() {
             <Button variant="outline" onClick={() => setIsOpen(false)} className="border-[#d1e8d5]">Batal</Button>
             <Button onClick={handleSave} className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
               {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={tambahTerbuka} onOpenChange={setTambahTerbuka}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B6B35]">Tambah Pengguna</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Nama Lengkap <span className="text-red-500">*</span></Label>
+              <Input value={formTambah.full_name} onChange={e => setFormTambah(p => ({ ...p, full_name: e.target.value }))} className="border-[#d1e8d5]" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email <span className="text-red-500">*</span></Label>
+              <Input type="email" placeholder="nama@pkk-kaltim.go.id" value={formTambah.email} onChange={e => setFormTambah(p => ({ ...p, email: e.target.value }))} className="border-[#d1e8d5]" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Password Awal <span className="text-red-500">*</span></Label>
+              <Input type="text" placeholder="Minimal 8 karakter" value={formTambah.password} onChange={e => setFormTambah(p => ({ ...p, password: e.target.value }))} className="border-[#d1e8d5]" />
+              <p className="text-xs text-gray-400">
+                Sengaja tidak disembunyikan supaya bisa disalin. Sampaikan ke pengguna, dan minta mereka menggantinya lewat menu Profil.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role <span className="text-red-500">*</span></Label>
+              <Select items={ROLE_ITEMS} value={formTambah.role} onValueChange={v => v && setFormTambah(p => ({ ...p, role: v, pokja_id: '' }))}>
+                <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ROLE_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {formTambah.role === 'operator' && (
+              <div className="space-y-1.5">
+                <Label>Pokja <span className="text-red-500">*</span></Label>
+                <Select items={pokjaItems} value={formTambah.pokja_id} onValueChange={v => v && setFormTambah(p => ({ ...p, pokja_id: v }))}>
+                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
+                  <SelectContent>
+                    {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTambahTerbuka(false)}>Batal</Button>
+            <Button onClick={simpanTambah} disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+              {isSaving ? 'Membuat...' : 'Buat Akun'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resetUntuk !== null} onOpenChange={terbuka => { if (!terbuka) setResetUntuk(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B6B35]">Reset Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-gray-600">
+              Password baru untuk <strong>{resetUntuk?.full_name}</strong> ({resetUntuk?.email}).
+            </p>
+            <div className="space-y-1.5">
+              <Label>Password Baru <span className="text-red-500">*</span></Label>
+              <Input type="text" placeholder="Minimal 8 karakter" value={passwordBaru} onChange={e => setPasswordBaru(e.target.value)} className="border-[#d1e8d5]" />
+              <p className="text-xs text-gray-400">
+                Diterapkan langsung tanpa email, jadi tidak bisa gagal diam-diam. Sampaikan ke pengguna yang bersangkutan.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetUntuk(null)}>Batal</Button>
+            <Button onClick={simpanReset} disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+              {isSaving ? 'Menyimpan...' : 'Ganti Password'}
             </Button>
           </DialogFooter>
         </DialogContent>
