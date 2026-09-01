@@ -101,11 +101,6 @@ export interface TindakLanjut {
   closed_date: string | null
   status: StatusTindakLanjut
   keterangan: string
-  /**
-   * @deprecated Foto pindah ke ProgresTindakLanjut sejak migrasi 010.
-   * Kolomnya belum di-drop; jangan ditulis lagi.
-   */
-  foto_path: string | null
   created_at: string
   updated_at: string | null
 }

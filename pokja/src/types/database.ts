@@ -222,7 +222,6 @@ export interface Database {
           closed_date: string | null
           status: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
           keterangan: string
-          foto_path: string | null
           created_at: string
           updated_at: string | null
         }
@@ -237,7 +236,6 @@ export interface Database {
           closed_date?: string | null
           status?: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
           keterangan?: string
-          foto_path?: string | null
           created_at?: string
           updated_at?: string | null
         }
@@ -252,7 +250,6 @@ export interface Database {
           closed_date?: string | null
           status?: 'open' | 'on_progress' | 'closed' | 'dibatalkan'
           keterangan?: string
-          foto_path?: string | null
           created_at?: string
           updated_at?: string | null
         }

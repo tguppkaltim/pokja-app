@@ -227,7 +227,7 @@ type TindakLanjutBaru = Omit<TindakLanjut, 'id' | 'created_at' | 'updated_at'>
  * perubahan status yang lolos tanpa tercatat di riwayat. Riwayat yang bocor
  * lebih berbahaya daripada tidak ada riwayat, karena terlihat seolah lengkap.
  */
-type DefinisiTindakLanjut = Omit<TindakLanjutBaru, 'status' | 'closed_date' | 'foto_path'>
+type DefinisiTindakLanjut = Omit<TindakLanjutBaru, 'status' | 'closed_date'>
 
 export async function createTindakLanjut(data: TindakLanjutBaru): Promise<TindakLanjut> {
   const { data: hasil, error } = await supabase

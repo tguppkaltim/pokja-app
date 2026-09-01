@@ -113,7 +113,6 @@ export default function RapatDetailPage() {
           open_date: toTanggalLokal(new Date()),
           status: 'open',
           closed_date: null,
-          foto_path: null,
           ...definisi,
         })
         // Entri pembuka supaya riwayatnya tidak kosong sejak awal.
