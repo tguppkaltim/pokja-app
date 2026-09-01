@@ -12,7 +12,7 @@ export function AppLayout() {
           <Outlet />
         </main>
         <footer className="flex-shrink-0 bg-white border-t border-[#d1e8d5] px-6 py-2 text-xs text-gray-400 text-center">
-          Sistem Monitoring TP PKK Kaltim — v1.0.0 &copy; 2026 Pemerintah Provinsi Kalimantan Timur
+          SIM PKK Kalimantan Timur — v1.0.0 &copy; 2026 Pemerintah Provinsi Kalimantan Timur
         </footer>
       </div>
     </div>

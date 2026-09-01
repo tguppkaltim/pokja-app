@@ -47,7 +47,7 @@ export function Header() {
   return (
     <header className="h-14 bg-white border-b border-[#d1e8d5] flex items-center justify-between px-4 flex-shrink-0">
       <h2 className="text-sm font-semibold text-gray-700 truncate">
-        Sistem Monitoring Kegiatan TP PKK Provinsi Kalimantan Timur
+        SIM PKK Kalimantan Timur
       </h2>
 
       <div className="flex items-center gap-1">

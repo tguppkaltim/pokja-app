@@ -49,9 +49,9 @@ export default function LoginPage() {
             <img src="/logo-pemprov.png" alt="Logo Pemprov Kaltim" className="h-20 w-auto" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#1B6B35]">TP PKK Kaltim</h1>
+            <h1 className="text-2xl font-bold text-[#1B6B35]">SIM PKK Kalimantan Timur</h1>
             <p className="text-sm text-gray-500">
-              Sistem Monitoring Rencana & Realisasi Kegiatan
+              Sistem Informasi Manajemen
             </p>
           </div>
         </div>

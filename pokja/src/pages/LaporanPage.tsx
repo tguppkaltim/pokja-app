@@ -122,7 +122,7 @@ export default function LaporanPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#1B6B35]">Laporan Kegiatan</h1>
-          <p className="text-sm text-gray-500 mt-1">Rekapitulasi progres dan realisasi kegiatan TP PKK Kaltim</p>
+          <p className="text-sm text-gray-500 mt-1">Rekapitulasi progres dan realisasi kegiatan TP PKK Kalimantan Timur</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handleExport('excel')} className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC]">

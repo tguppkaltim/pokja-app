@@ -89,7 +89,7 @@ export default function KegiatanListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1B6B35]">Rencana Kegiatan</h1>
-          <p className="text-sm text-gray-500 mt-1">Plan of Action (POA) TP PKK Kaltim</p>
+          <p className="text-sm text-gray-500 mt-1">Plan of Action (POA) TP PKK Kalimantan Timur</p>
         </div>
         {canEdit && (
           <Link to="/kegiatan/tambah" className={cn(buttonVariants(), 'bg-[#1B6B35] hover:bg-[#134D26] text-white')}>
