@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
-import { BULAN_LABELS } from '@/data/mockData'
+import { BULAN_LABELS } from '@/lib/kalender'
 
 const CURRENT_MONTH = new Date().getMonth() + 1
 const CURRENT_YEAR = new Date().getFullYear()
@@ -170,6 +170,11 @@ export default function DashboardPage() {
   const totalRealisasi = anggaranChartData.reduce((s, d) => s + d.realisasi, 0)
   const pctSerapan = totalRencana > 0 ? Math.round((totalRealisasi / totalRencana) * 100) : null
 
+  // Dihitung dari kegiatan dalam lingkup filter agar angkanya konsisten dengan
+  // sisa halaman. Viewer tidak bisa menindaklanjuti, jadi tidak perlu diberi tahu.
+  const belumDipetakan = scopedKegiatan.filter(k => k.program_prioritas_id === null).length
+  const bolehMemetakan = user?.role === 'super_admin' || user?.role === 'operator'
+
   const tableData = scopedKegiatan.map(k => {
     const prog = programPokok.find(p => p.id === k.program_pokok_id)
     const pokja = pokjaList.find(p => p.id === k.pokja_id)
@@ -275,6 +280,24 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
+
+      {belumDipetakan > 0 && bolehMemetakan && (
+        <Link
+          to="/kegiatan"
+          className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100"
+        >
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-amber-900">
+              {belumDipetakan} kegiatan belum dipetakan ke Program Prioritas
+            </p>
+            <p className="text-xs text-amber-700">
+              Kegiatan ini dibuat sebelum master program diadopsi. Buka Rencana Kegiatan lalu Edit untuk melengkapinya.
+            </p>
+          </div>
+          <ChevronRight className="w-4 h-4 shrink-0 text-amber-600" />
+        </Link>
+      )}
 
       {/* KPI Kegiatan */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

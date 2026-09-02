@@ -38,18 +38,21 @@ export interface Database {
           id: number
           name: string
           description: string
+          nama_lengkap: string
           created_at: string
         }
         Insert: {
           id?: number
           name: string
           description: string
+          nama_lengkap?: string
           created_at?: string
         }
         Update: {
           id?: number
           name?: string
           description?: string
+          nama_lengkap?: string
           created_at?: string
         }
         Relationships: []
@@ -59,18 +62,84 @@ export interface Database {
           id: number
           pokja_id: number
           name: string
+          indikator: string
+          sasaran: string
+          urutan: number
+          di_luar_master: boolean
           created_at: string
         }
         Insert: {
           id?: number
           pokja_id: number
           name: string
+          indikator?: string
+          sasaran?: string
+          urutan?: number
+          di_luar_master?: boolean
           created_at?: string
         }
         Update: {
           id?: number
           pokja_id?: number
           name?: string
+          indikator?: string
+          sasaran?: string
+          urutan?: number
+          di_luar_master?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      program_unggulan: {
+        Row: {
+          id: number
+          program_pokok_id: number
+          name: string
+          asal: string
+          urutan: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          program_pokok_id: number
+          name: string
+          asal?: string
+          urutan?: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          program_pokok_id?: number
+          name?: string
+          asal?: string
+          urutan?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      program_prioritas: {
+        Row: {
+          id: number
+          program_unggulan_id: number
+          name: string
+          contoh_kegiatan: string
+          urutan: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          program_unggulan_id: number
+          name: string
+          contoh_kegiatan?: string
+          urutan?: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          program_unggulan_id?: number
+          name?: string
+          contoh_kegiatan?: string
+          urutan?: number
           created_at?: string
         }
         Relationships: []
@@ -80,6 +149,7 @@ export interface Database {
           id: number
           pokja_id: number
           program_pokok_id: number
+          program_prioritas_id: number | null
           nama_kegiatan: string
           sasaran: string
           pelaksana: string
@@ -92,6 +162,7 @@ export interface Database {
           id?: number
           pokja_id: number
           program_pokok_id: number
+          program_prioritas_id?: number | null
           nama_kegiatan: string
           sasaran: string
           pelaksana: string
@@ -104,6 +175,7 @@ export interface Database {
           id?: number
           pokja_id?: number
           program_pokok_id?: number
+          program_prioritas_id?: number | null
           nama_kegiatan?: string
           sasaran?: string
           pelaksana?: string

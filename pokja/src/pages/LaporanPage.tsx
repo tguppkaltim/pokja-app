@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
-import { BULAN_FULL } from '@/data/mockData'
+import { BULAN_FULL } from '@/lib/kalender'
 import { toast } from 'sonner'
 
 function StatusBadge({ status }: { status: string }) {

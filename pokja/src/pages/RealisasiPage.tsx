@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, upsertRealisasi, uploadEvidence, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
-import { BULAN_FULL } from '@/data/mockData'
+import { BULAN_FULL } from '@/lib/kalender'
 import { cn, toTanggalLokal, dariTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { toast } from 'sonner'
 

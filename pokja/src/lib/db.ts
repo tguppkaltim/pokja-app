@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 import { formatTanggalPanjang } from '@/lib/utils'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
@@ -10,13 +10,13 @@ export async function fetchPokja(): Promise<Pokja[]> {
   return data ?? []
 }
 
-export async function createPokja(data: Pick<Pokja, 'name' | 'description'>): Promise<Pokja> {
+export async function createPokja(data: Pick<Pokja, 'name' | 'description'> & Partial<Pick<Pokja, 'nama_lengkap'>>): Promise<Pokja> {
   const { data: result, error } = await supabase.from('pokja').insert(data).select().single()
   if (error) throw error
   return result
 }
 
-export async function updatePokja(id: number, data: Pick<Pokja, 'name' | 'description'>): Promise<void> {
+export async function updatePokja(id: number, data: Partial<Pick<Pokja, 'name' | 'description' | 'nama_lengkap'>>): Promise<void> {
   const { error } = await supabase.from('pokja').update(data).eq('id', id)
   if (error) throw error
 }
@@ -28,27 +28,91 @@ export async function deletePokja(id: number): Promise<void> {
 
 // ─── Program Pokok ───────────────────────────────────────────────────────────
 
+/** Bidang yang tidak punya program pokok pun tetap perlu tampil di master. */
+type ProgramPokokBaru = Pick<ProgramPokok, 'pokja_id' | 'name'> &
+  Partial<Pick<ProgramPokok, 'indikator' | 'sasaran' | 'urutan'>>
+
 export async function fetchProgramPokok(pokjaId?: number): Promise<ProgramPokok[]> {
-  let q = supabase.from('program_pokok').select('*').order('id')
+  // urutan mengikuti nomor baku 10 Program Pokok PKK; id jadi pemecah seri
+  // untuk baris di luar daftar baku (urutan 0).
+  let q = supabase.from('program_pokok').select('*').order('urutan').order('id')
   if (pokjaId) q = q.eq('pokja_id', pokjaId)
   const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
 
-export async function createProgramPokok(data: Pick<ProgramPokok, 'pokja_id' | 'name'>): Promise<ProgramPokok> {
+export async function createProgramPokok(data: ProgramPokokBaru): Promise<ProgramPokok> {
   const { data: result, error } = await supabase.from('program_pokok').insert(data).select().single()
   if (error) throw error
   return result
 }
 
-export async function updateProgramPokok(id: number, data: Pick<ProgramPokok, 'pokja_id' | 'name'>): Promise<void> {
+export async function updateProgramPokok(id: number, data: Partial<ProgramPokokBaru>): Promise<void> {
   const { error } = await supabase.from('program_pokok').update(data).eq('id', id)
   if (error) throw error
 }
 
 export async function deleteProgramPokok(id: number): Promise<void> {
   const { error } = await supabase.from('program_pokok').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Program Unggulan ────────────────────────────────────────────────────────
+
+type ProgramUnggulanBaru = Pick<ProgramUnggulan, 'program_pokok_id' | 'name'> &
+  Partial<Pick<ProgramUnggulan, 'asal' | 'urutan'>>
+
+export async function fetchProgramUnggulan(programPokokId?: number): Promise<ProgramUnggulan[]> {
+  let q = supabase.from('program_unggulan').select('*').order('urutan').order('id')
+  if (programPokokId) q = q.eq('program_pokok_id', programPokokId)
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createProgramUnggulan(data: ProgramUnggulanBaru): Promise<ProgramUnggulan> {
+  const { data: result, error } = await supabase.from('program_unggulan').insert(data).select().single()
+  if (error) throw error
+  return result
+}
+
+export async function updateProgramUnggulan(id: number, data: Partial<ProgramUnggulanBaru>): Promise<void> {
+  const { error } = await supabase.from('program_unggulan').update(data).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteProgramUnggulan(id: number): Promise<void> {
+  const { error } = await supabase.from('program_unggulan').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Program Prioritas ───────────────────────────────────────────────────────
+
+type ProgramPrioritasBaru = Pick<ProgramPrioritas, 'program_unggulan_id' | 'name'> &
+  Partial<Pick<ProgramPrioritas, 'contoh_kegiatan' | 'urutan'>>
+
+export async function fetchProgramPrioritas(programUnggulanId?: number): Promise<ProgramPrioritas[]> {
+  let q = supabase.from('program_prioritas').select('*').order('urutan').order('id')
+  if (programUnggulanId) q = q.eq('program_unggulan_id', programUnggulanId)
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createProgramPrioritas(data: ProgramPrioritasBaru): Promise<ProgramPrioritas> {
+  const { data: result, error } = await supabase.from('program_prioritas').insert(data).select().single()
+  if (error) throw error
+  return result
+}
+
+export async function updateProgramPrioritas(id: number, data: Partial<ProgramPrioritasBaru>): Promise<void> {
+  const { error } = await supabase.from('program_prioritas').update(data).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteProgramPrioritas(id: number): Promise<void> {
+  const { error } = await supabase.from('program_prioritas').delete().eq('id', id)
   if (error) throw error
 }
 

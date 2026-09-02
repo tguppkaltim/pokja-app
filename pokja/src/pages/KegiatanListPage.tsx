@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Pencil, Eye, Trash2 } from 'lucide-react'
+import { Plus, Search, Pencil, Eye, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Input } from '@/components/ui/input'
@@ -61,6 +61,7 @@ export default function KegiatanListPage() {
         ...k,
         pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
         programName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
+        belumDipetakan: k.program_prioritas_id === null,
         jadwal: allJadwal.filter(j => j.kegiatan_id === k.id).map(j => formatTanggalPendek(j.tanggal)).join(', '),
       }))
   }, [allKegiatan, allJadwal, filterPokja, filterTahun, search, pokjaList, programPokok])
@@ -153,7 +154,18 @@ export default function KegiatanListPage() {
                     <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-600 text-xs hidden lg:table-cell">{k.programName}</TableCell>
-                  <TableCell className="px-4 py-3 font-medium text-gray-800 max-w-xs whitespace-normal"><p className="line-clamp-2">{k.nama_kegiatan}</p></TableCell>
+                  <TableCell className="px-4 py-3 font-medium text-gray-800 max-w-xs whitespace-normal">
+                    <p className="line-clamp-2">{k.nama_kegiatan}</p>
+                    {k.belumDipetakan && (
+                      <Badge
+                        variant="outline"
+                        title="Kegiatan ini dibuat sebelum master program diadopsi. Buka Edit untuk memilih Program Prioritasnya."
+                        className="mt-1 gap-1 border-amber-300 bg-amber-50 text-amber-700 text-[11px] font-normal"
+                      >
+                        <AlertTriangle className="w-3 h-3" /> Belum dipetakan
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-xs hidden xl:table-cell">{k.sasaran}</TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell max-w-32"><p className="truncate">{k.jadwal || '-'}</p></TableCell>
                   <TableCell className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell">{formatRupiah(k.anggaran)}</TableCell>

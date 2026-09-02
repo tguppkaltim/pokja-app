@@ -14,12 +14,14 @@ import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan } from '@/lib/db'
 import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
+import { prioritasPerPokja } from '@/lib/master-program'
 import { toast } from 'sonner'
 
 
 const emptyForm = {
   pokja_id: '',
   program_pokok_id: '',
+  program_prioritas_id: '',
   nama_kegiatan: '',
   sasaran: '',
   pelaksana: '',
@@ -29,7 +31,7 @@ const emptyForm = {
 
 export default function KegiatanFormPage() {
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas } = useData()
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
@@ -49,6 +51,7 @@ export default function KegiatanFormPage() {
           setForm({
             pokja_id: String(existing.pokja_id),
             program_pokok_id: String(existing.program_pokok_id),
+            program_prioritas_id: existing.program_prioritas_id === null ? '' : String(existing.program_prioritas_id),
             nama_kegiatan: existing.nama_kegiatan,
             sasaran: existing.sasaran,
             pelaksana: existing.pelaksana,
@@ -76,6 +79,17 @@ export default function KegiatanFormPage() {
   const pokjaItems = pokjaOptions.map(p => ({ value: String(p.id), label: p.name }))
   const programItems = filteredProgram.map(p => ({ value: String(p.id), label: p.name }))
 
+  // Prioritas disaring ke Program Pokok yang dipilih. Sebagian Program Pokok
+  // belum dirinci di master resmi sehingga daftarnya kosong — itu bukan galat,
+  // dan formnya tidak boleh memaksa memilih sesuatu yang tidak ada.
+  const master = { pokja: pokjaList, programPokok, programUnggulan, programPrioritas }
+  const jalurTersedia = form.program_pokok_id
+    ? prioritasPerPokja(null, master).filter(j => j.pokok.id === parseInt(form.program_pokok_id))
+    : []
+  const prioritasItems = jalurTersedia.map(j => ({ value: String(j.prioritas.id), label: j.prioritas.name }))
+  const jalurTerpilih = jalurTersedia.find(j => String(j.prioritas.id) === form.program_prioritas_id)
+  const prioritasWajib = Boolean(form.program_pokok_id) && jalurTersedia.length > 0
+
   function addJadwal(d: Date | undefined) {
     if (!d) return
     const tanggal = toTanggalLokal(d)
@@ -98,6 +112,10 @@ export default function KegiatanFormPage() {
       toast.error('Pokja, Program Pokok, dan Nama Kegiatan wajib diisi.')
       return
     }
+    if (prioritasWajib && !form.program_prioritas_id) {
+      toast.error('Pilih Program Prioritas yang menaungi kegiatan ini.')
+      return
+    }
     if (form.jadwal.length === 0) {
       toast.error('Tambahkan minimal satu jadwal pelaksanaan.')
       return
@@ -111,6 +129,7 @@ export default function KegiatanFormPage() {
       const payload = {
         pokja_id: parseInt(pokjaAktif),
         program_pokok_id: parseInt(form.program_pokok_id),
+        program_prioritas_id: form.program_prioritas_id ? parseInt(form.program_prioritas_id) : null,
         nama_kegiatan: form.nama_kegiatan,
         sasaran: form.sasaran,
         pelaksana: form.pelaksana,
@@ -161,7 +180,7 @@ export default function KegiatanFormPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
-                <Select items={pokjaItems} value={pokjaAktif} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '' }))} disabled={user?.role === 'operator'}>
+                <Select items={pokjaItems} value={pokjaAktif} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '', program_prioritas_id: '' }))} disabled={user?.role === 'operator'}>
                   <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
                     {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
@@ -170,7 +189,7 @@ export default function KegiatanFormPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Program Pokok <span className="text-red-500">*</span></Label>
-                <Select items={programItems} value={form.program_pokok_id} onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v }))}>
+                <Select items={programItems} value={form.program_pokok_id} onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v, program_prioritas_id: '' }))}>
                   <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Program Pokok" /></SelectTrigger>
                   <SelectContent>
                     {programItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
@@ -178,6 +197,50 @@ export default function KegiatanFormPage() {
                 </Select>
               </div>
             </div>
+
+            {form.program_pokok_id && (
+              <div className="space-y-1.5">
+                <Label>
+                  Program Prioritas {prioritasWajib && <span className="text-red-500">*</span>}
+                </Label>
+                {prioritasWajib ? (
+                  <>
+                    <Select
+                      items={prioritasItems}
+                      value={form.program_prioritas_id}
+                      onValueChange={v => v && setForm(prev => ({ ...prev, program_prioritas_id: v }))}
+                    >
+                      <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Program Prioritas" /></SelectTrigger>
+                      <SelectContent>
+                        {jalurTersedia.map(j => (
+                          <SelectItem key={j.prioritas.id} value={String(j.prioritas.id)}>
+                            {j.prioritas.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {jalurTerpilih && (
+                      <div className="rounded-lg border border-[#EAF5EC] bg-[#F6FBF7] px-3 py-2 space-y-1">
+                        <p className="text-xs text-gray-500">
+                          Program Unggulan: <span className="text-gray-700">{jalurTerpilih.unggulan.name}</span>
+                        </p>
+                        {jalurTerpilih.prioritas.contoh_kegiatan && (
+                          <details className="text-xs text-gray-500">
+                            <summary className="cursor-pointer text-[#1B6B35]">Contoh kegiatan acuan</summary>
+                            <p className="whitespace-pre-line pt-1 text-gray-600">{jalurTerpilih.prioritas.contoh_kegiatan}</p>
+                          </details>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="rounded-lg border border-dashed border-[#d1e8d5] px-3 py-2 text-xs text-gray-500">
+                    Program Pokok ini belum punya Program Prioritas di master.
+                    Kegiatan tetap bisa disimpan; lengkapi masternya lewat menu Master Program.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>Nama Kegiatan <span className="text-red-500">*</span></Label>

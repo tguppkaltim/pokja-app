@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText } from 'lucide-react'
+import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn, formatTanggalPanjang } from '@/lib/utils'
+import { jalurPrioritas } from '@/lib/master-program'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, EvidenceFile, JadwalKegiatan } from '@/types'
-import { BULAN_FULL } from '@/data/mockData'
+import { BULAN_FULL } from '@/lib/kalender'
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -27,7 +28,7 @@ export default function KegiatanDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas } = useData()
   const [kegiatan, setKegiatan] = useState<Kegiatan | null>(null)
   const [realisasiList, setRealisasiList] = useState<RealisasiKegiatan[]>([])
   const [jadwalList, setJadwalList] = useState<JadwalKegiatan[]>([])
@@ -66,6 +67,9 @@ export default function KegiatanDetailPage() {
 
   const pokja = pokjaList.find(p => p.id === kegiatan.pokja_id)
   const program = programPokok.find(p => p.id === kegiatan.program_pokok_id)
+  const jalur = jalurPrioritas(kegiatan.program_prioritas_id, {
+    pokja: pokjaList, programPokok, programUnggulan, programPrioritas,
+  })
 
   // Anggaran aktual kegiatan = jumlah anggaran aktual seluruh sesi terlaksana.
   const anggaranAktual = realisasiList
@@ -95,7 +99,22 @@ export default function KegiatanDetailPage() {
               <div className="flex flex-wrap gap-2 mb-2">
                 <Badge variant="outline" className="border-[#52B788] text-[#2E8B57]">{pokja?.name}</Badge>
                 <Badge className="bg-[#EAF5EC] text-[#1B6B35]">{program?.name}</Badge>
+                {!jalur && (
+                  <Badge
+                    variant="outline"
+                    title="Kegiatan ini dibuat sebelum master program diadopsi."
+                    className="gap-1 border-amber-300 bg-amber-50 text-amber-700 font-normal"
+                  >
+                    <AlertTriangle className="w-3 h-3" /> Belum dipetakan
+                  </Badge>
+                )}
               </div>
+              {jalur && (
+                <p className="text-xs text-gray-500 mb-2">
+                  {jalur.unggulan.name} <span className="text-gray-300">›</span>{' '}
+                  <span className="text-gray-700">{jalur.prioritas.name}</span>
+                </p>
+              )}
               <CardTitle className="text-xl text-gray-800 leading-snug">{kegiatan.nama_kegiatan}</CardTitle>
             </div>
           </div>

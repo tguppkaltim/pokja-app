@@ -16,3 +16,9 @@ pokja/public/ss/
 # Memuat nama & email pengguna asli — jangan masuk repo publik.
 # File tetap ada di disk untuk keperluan setup database.
 supabase/migrations/003_update_profiles.sql
+
+# Dokumen kerja internal TP PKK. Isinya sudah dituangkan ke
+# supabase/migrations/012_master_program_hierarki.sql sebagai sumber kebenaran.
+master-program.xlsx
+# Berkas kunci Excel saat dokumen sedang dibuka.
+~$*

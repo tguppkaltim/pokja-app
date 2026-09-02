@@ -12,8 +12,11 @@ export interface User {
 
 export interface Pokja {
   id: number
+  /** Label ringkas untuk antarmuka, mis. "Pokja I". */
   name: string
   description: string
+  /** Nama resmi sesuai master program, mis. "Pembinaan Karakter Keluarga (POKJA I)". */
+  nama_lengkap: string
   created_at: string
 }
 
@@ -21,6 +24,34 @@ export interface ProgramPokok {
   id: number
   pokja_id: number
   name: string
+  /** Daftar indikator dari master. Berbaris banyak; tampilkan apa adanya. */
+  indikator: string
+  /** Daftar sasaran dari master. Berbaris banyak; tampilkan apa adanya. */
+  sasaran: string
+  /** Nomor urut baku 10 Program Pokok PKK; 0 bila di luar daftar baku. */
+  urutan: number
+  /** Tidak ada di master resmi, tapi masih dipakai kegiatan lama. */
+  di_luar_master: boolean
+  created_at: string
+}
+
+export interface ProgramUnggulan {
+  id: number
+  program_pokok_id: number
+  name: string
+  /** "Pusat" atau "Daerah". */
+  asal: string
+  urutan: number
+  created_at: string
+}
+
+export interface ProgramPrioritas {
+  id: number
+  program_unggulan_id: number
+  name: string
+  /** Contoh kegiatan acuan dari master, bukan kegiatan yang direncanakan. */
+  contoh_kegiatan: string
+  urutan: number
   created_at: string
 }
 
@@ -28,6 +59,12 @@ export interface Kegiatan {
   id: number
   pokja_id: number
   program_pokok_id: number
+  /**
+   * Program Prioritas yang diacu. Nullable karena kegiatan yang dibuat sebelum
+   * master program diadopsi belum dipetakan — antarmuka menandainya "belum
+   * dipetakan". Kegiatan baru wajib mengisinya.
+   */
+  program_prioritas_id: number | null
   nama_kegiatan: string
   sasaran: string
   pelaksana: string
