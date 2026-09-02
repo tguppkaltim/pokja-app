@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 import { formatTanggalPanjang } from '@/lib/utils'
+import { bandingkanPokok } from '@/lib/master-program'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
 
@@ -33,13 +34,14 @@ type ProgramPokokBaru = Pick<ProgramPokok, 'pokja_id' | 'name'> &
   Partial<Pick<ProgramPokok, 'indikator' | 'sasaran' | 'urutan'>>
 
 export async function fetchProgramPokok(pokjaId?: number): Promise<ProgramPokok[]> {
-  // urutan mengikuti nomor baku 10 Program Pokok PKK; id jadi pemecah seri
-  // untuk baris di luar daftar baku (urutan 0).
-  let q = supabase.from('program_pokok').select('*').order('urutan').order('id')
+  let q = supabase.from('program_pokok').select('*')
   if (pokjaId) q = q.eq('pokja_id', pokjaId)
   const { data, error } = await q
   if (error) throw error
-  return data ?? []
+  // Diurutkan di sini, bukan lewat .order(): urutan 0 berarti "di luar daftar
+  // baku" dan harus jatuh ke bawah, sedangkan PostgREST hanya bisa mengurutkan
+  // kolomnya apa adanya sehingga nol malah naik ke atas.
+  return (data ?? []).sort(bandingkanPokok)
 }
 
 export async function createProgramPokok(data: ProgramPokokBaru): Promise<ProgramPokok> {

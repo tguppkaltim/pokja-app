@@ -16,6 +16,23 @@ export interface MasterProgram {
   programPrioritas: ProgramPrioritas[]
 }
 
+/**
+ * Pembanding urutan untuk Program Pokok.
+ *
+ * `urutan` 0 berarti di luar daftar baku 10 Program Pokok PKK — misalnya baris
+ * Sekretariat, atau program lama yang masih dipakai kegiatan. Diurutkan apa
+ * adanya, nol justru naik ke paling atas dan mendahului Pancasila; yang di luar
+ * daftar baku semestinya di bawah.
+ */
+export function bandingkanPokok(
+  a: { urutan: number; id: number },
+  b: { urutan: number; id: number },
+): number {
+  const ua = a.urutan === 0 ? Number.MAX_SAFE_INTEGER : a.urutan
+  const ub = b.urutan === 0 ? Number.MAX_SAFE_INTEGER : b.urutan
+  return ua - ub || a.id - b.id
+}
+
 export interface JalurPrioritas {
   prioritas: ProgramPrioritas
   unggulan: ProgramUnggulan
@@ -50,7 +67,7 @@ export function labelJalur(jalur: JalurPrioritas): string {
 export function prioritasPerPokja(pokjaId: number | null, master: MasterProgram): JalurPrioritas[] {
   const pokok = master.programPokok
     .filter(p => pokjaId === null || p.pokja_id === pokjaId)
-    .sort((a, b) => a.urutan - b.urutan || a.id - b.id)
+    .sort(bandingkanPokok)
 
   const hasil: JalurPrioritas[] = []
   for (const pp of pokok) {
@@ -82,5 +99,5 @@ export function pokokTanpaPrioritas(pokjaId: number | null, master: MasterProgra
   )
   return master.programPokok
     .filter(p => (pokjaId === null || p.pokja_id === pokjaId) && !punya.has(p.id))
-    .sort((a, b) => a.urutan - b.urutan || a.id - b.id)
+    .sort(bandingkanPokok)
 }

@@ -18,6 +18,7 @@ import {
   createProgramPrioritas, updateProgramPrioritas, deleteProgramPrioritas,
 } from '@/lib/db'
 import type { ProgramPokok, ProgramUnggulan, ProgramPrioritas } from '@/types'
+import { bandingkanPokok } from '@/lib/master-program'
 import { toast } from 'sonner'
 
 /**
@@ -166,7 +167,7 @@ export default function MasterProgramPage() {
 
       <div className="space-y-4">
         {bidangTampil.map(bidang => {
-          const daftarPokok = programPokok.filter(p => p.pokja_id === bidang.id).sort(urut)
+          const daftarPokok = programPokok.filter(p => p.pokja_id === bidang.id).sort(bandingkanPokok)
           return (
             <Card key={bidang.id} className="border-[#d1e8d5]">
               <CardContent className="pt-4 space-y-3">
