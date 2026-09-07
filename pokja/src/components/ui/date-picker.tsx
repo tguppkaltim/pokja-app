@@ -73,7 +73,7 @@ export function DatePicker({
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-semibold text-[#1B6B35]">
+          <span className="text-sm font-semibold text-pkk">
             {BULAN_FULL[month.getMonth()]} {month.getFullYear()}
           </span>
           <button
@@ -104,11 +104,11 @@ export function DatePicker({
             day: 'flex-1 flex justify-center',
             day_button: cn(
               'w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-colors',
-              'hover:bg-[#EAF5EC] hover:text-[#1B6B35] cursor-pointer',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#52B788]'
+              'hover:bg-pkk-tint hover:text-pkk cursor-pointer',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pkk-soft'
             ),
-            selected: '[&>button]:!bg-[#1B6B35] [&>button]:!text-white [&>button]:hover:!bg-[#134D26]',
-            today: '[&>button]:font-bold [&>button]:text-[#1B6B35]',
+            selected: '[&>button]:!bg-pkk [&>button]:!text-white [&>button]:hover:!bg-pkk-hover',
+            today: '[&>button]:font-bold [&>button]:text-pkk',
             outside: 'opacity-30',
             disabled: 'opacity-30 cursor-not-allowed',
           }}

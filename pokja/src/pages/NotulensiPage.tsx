@@ -90,11 +90,11 @@ export default function NotulensiPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B6B35]">Notulensi Rapat</h1>
+          <h1 className="text-2xl font-bold text-pkk">Notulensi Rapat</h1>
           <p className="text-sm text-gray-500 mt-1">Catatan rapat dan pemantauan tindak lanjutnya.</p>
         </div>
         {bolehKelola && (
-          <Button onClick={() => navigate('/notulensi/tambah')} className="bg-[#1B6B35] hover:bg-[#134D26]">
+          <Button onClick={() => navigate('/notulensi/tambah')} className="bg-pkk hover:bg-pkk-hover">
             <Plus className="w-4 h-4 mr-1" /> Tambah Rapat
           </Button>
         )}
@@ -102,9 +102,9 @@ export default function NotulensiPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <RingkasanKartu label="Total Tindak Lanjut" nilai={ringkasan.total} />
-        <RingkasanKartu label="Open" nilai={ringkasan.open} warna="text-red-600" />
-        <RingkasanKartu label="On Progress" nilai={ringkasan.onProgress} warna="text-amber-600" />
-        <RingkasanKartu label="Terlambat" nilai={ringkasan.terlambat} warna="text-red-600" />
+        <RingkasanKartu label="Open" nilai={ringkasan.open} warna="text-status-danger" />
+        <RingkasanKartu label="On Progress" nilai={ringkasan.onProgress} warna="text-status-warning" />
+        <RingkasanKartu label="Terlambat" nilai={ringkasan.terlambat} warna="text-status-danger" />
       </div>
 
       <Tabs defaultValue="rapat">
@@ -116,11 +116,11 @@ export default function NotulensiPage() {
         <TabsContent value="rapat" className="mt-4 space-y-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input placeholder="Cari judul atau ringkasan..." value={cari} onChange={e => setCari(e.target.value)} className="pl-9 border-[#d1e8d5]" />
+            <Input placeholder="Cari judul atau ringkasan..." value={cari} onChange={e => setCari(e.target.value)} className="pl-9 border-pkk-border" />
           </div>
 
           {rapatTersaring.length === 0 && (
-            <Card className="border-[#d1e8d5]">
+            <Card className="border-pkk-border">
               <CardContent className="py-12 text-center text-gray-400">
                 {rapat.length === 0 ? 'Belum ada notulensi rapat.' : 'Tidak ada rapat yang sesuai pencarian.'}
               </CardContent>
@@ -131,7 +131,7 @@ export default function NotulensiPage() {
             const h = hitungRapat(r.id)
             return (
               <Link key={r.id} to={`/notulensi/${r.id}`} className="block">
-                <Card className="border-[#d1e8d5] transition-colors hover:bg-[#F6FBF7]">
+                <Card className="border-pkk-border transition-colors hover:bg-pkk-surface">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -139,23 +139,23 @@ export default function NotulensiPage() {
                           <CalendarDays className="w-3.5 h-3.5" />
                           {formatTanggalPanjang(r.tanggal)}
                         </div>
-                        <CardTitle className="text-base text-[#1B6B35]">{r.judul}</CardTitle>
+                        <CardTitle className="text-base text-pkk">{r.judul}</CardTitle>
                         {r.ringkasan && <CardDescription className="line-clamp-2 mt-1">{r.ringkasan}</CardDescription>}
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="text-xs border-[#52B788] text-[#2E8B57]">
+                    <Badge variant="outline" className="text-xs border-pkk-soft text-pkk-accent">
                       {h.total} tindak lanjut
                     </Badge>
                     {h.belum > 0 && (
-                      <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
+                      <Badge variant="outline" className="text-xs border-status-warning/30 text-status-warning">
                         {h.belum} belum selesai
                       </Badge>
                     )}
                     {h.terlambat > 0 && (
-                      <Badge className="text-xs bg-red-100 text-red-700 border-red-200">
+                      <Badge className="text-xs bg-status-danger-tint text-status-danger border-status-danger/25">
                         <AlertTriangle className="w-3 h-3 mr-1" /> {h.terlambat} terlambat
                       </Badge>
                     )}
@@ -169,24 +169,24 @@ export default function NotulensiPage() {
         <TabsContent value="monitoring" className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
             <Select items={statusItems} value={filterStatus} onValueChange={v => v && setFilterStatus(v)}>
-              <SelectTrigger className="w-44 border-[#d1e8d5] text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44 border-pkk-border text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {statusItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select items={picFilterItems} value={filterPic} onValueChange={v => v && setFilterPic(v)}>
-              <SelectTrigger className="w-44 border-[#d1e8d5] text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44 border-pkk-border text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {picFilterItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          <Card className="border-[#d1e8d5]">
+          <Card className="border-pkk-border">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+                  <TableRow className="bg-pkk-hover hover:bg-pkk-hover border-b-0">
                     <TableHead className="text-white w-10">No</TableHead>
                     <TableHead className="text-white hidden lg:table-cell">Tgl. Rapat</TableHead>
                     <TableHead className="text-white">Uraian Tindak Lanjut</TableHead>
@@ -203,23 +203,23 @@ export default function NotulensiPage() {
                     const lewat = terlambat(t)
                     const dapatDiubah = bolehUbah(t, user)
                     return (
-                      <TableRow key={t.id} className={idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/30'}>
+                      <TableRow key={t.id} className={idx % 2 === 0 ? '' : 'bg-pkk-tint/30'}>
                         <TableCell className="px-4 py-3 text-gray-400">{idx + 1}</TableCell>
                         <TableCell className="px-4 py-3 text-xs text-gray-500 hidden lg:table-cell">
                           {t.rapat ? formatTanggalPendek(t.rapat.tanggal) : '-'}
                         </TableCell>
                         <TableCell className="px-4 py-3 max-w-sm whitespace-normal">
-                          <Link to={`/notulensi/${t.rapat_id}`} className="text-gray-800 hover:text-[#1B6B35]">
+                          <Link to={`/notulensi/${t.rapat_id}`} className="text-gray-800 hover:text-pkk">
                             {t.uraian}
                           </Link>
                         </TableCell>
                         <TableCell className="px-4 py-3 hidden md:table-cell">
-                          <Badge variant="outline" className="text-xs border-[#52B788] text-[#2E8B57]">
+                          <Badge variant="outline" className="text-xs border-pkk-soft text-pkk-accent">
                             {labelPic(t, pokjaList)}
                           </Badge>
                         </TableCell>
                         <TableCell className="px-4 py-3 text-xs text-gray-500 hidden xl:table-cell">{formatTanggalPendek(t.open_date)}</TableCell>
-                        <TableCell className={`px-4 py-3 text-xs hidden xl:table-cell ${lewat ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                        <TableCell className={`px-4 py-3 text-xs hidden xl:table-cell ${lewat ? 'text-status-danger font-medium' : 'text-gray-500'}`}>
                           {t.target_closed ? formatTanggalPendek(t.target_closed) : '-'}
                         </TableCell>
                         <TableCell className="px-4 py-3 text-xs text-gray-500 hidden xl:table-cell">
@@ -229,7 +229,7 @@ export default function NotulensiPage() {
                           <div className="flex flex-col gap-1 items-start">
                             {dapatDiubah ? (
                               <Select items={STATUS_ITEMS} value={t.status} onValueChange={v => v && bukaProgres(t, v as StatusTindakLanjut)}>
-                                <SelectTrigger size="sm" className="w-32 border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+                                <SelectTrigger size="sm" className="w-32 border-pkk-border"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {STATUS_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                                 </SelectContent>
@@ -238,7 +238,7 @@ export default function NotulensiPage() {
                               <Badge className={`text-xs ${STATUS_BADGE[t.status]}`}>{STATUS_LABEL[t.status]}</Badge>
                             )}
                             {lewat && (
-                              <Badge className="text-xs bg-red-100 text-red-700 border-red-200">
+                              <Badge className="text-xs bg-status-danger-tint text-status-danger border-status-danger/25">
                                 <AlertTriangle className="w-3 h-3 mr-1" /> Terlambat
                               </Badge>
                             )}
@@ -278,9 +278,9 @@ export default function NotulensiPage() {
   )
 }
 
-function RingkasanKartu({ label, nilai, warna = 'text-[#1B6B35]' }: { label: string; nilai: number; warna?: string }) {
+function RingkasanKartu({ label, nilai, warna = 'text-pkk' }: { label: string; nilai: number; warna?: string }) {
   return (
-    <Card className="border-[#d1e8d5]">
+    <Card className="border-pkk-border transisi-kartu hover:border-pkk-soft hover:shadow-md">
       <CardContent className="pt-5">
         <p className="text-sm text-gray-500">{label}</p>
         <p className={`text-2xl font-bold mt-1 ${warna}`}>{nilai}</p>

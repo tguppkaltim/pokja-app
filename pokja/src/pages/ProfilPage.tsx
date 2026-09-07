@@ -8,17 +8,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/contexts/auth-context'
+import { LABEL_PERAN, KETERANGAN_PERAN, BADGE_PERAN } from '@/lib/peran'
 import { useData } from '@/contexts/data-context'
 import { updateProfile } from '@/lib/db'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
-
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Super Administrator',
-  sekretariat: 'Sekretariat',
-  operator: 'Operator Pokja',
-  viewer: 'Viewer / Pimpinan',
-}
 
 export default function ProfilPage() {
   const { user } = useAuth()
@@ -74,75 +68,80 @@ export default function ProfilPage() {
   return (
     <div className="space-y-5 max-w-xl">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">Profil Saya</h1>
+        <h1 className="text-2xl font-bold text-pkk">Profil Saya</h1>
         <p className="text-sm text-gray-500 mt-1">Kelola informasi akun Anda</p>
       </div>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <Avatar className="w-16 h-16">
-              <AvatarFallback className="bg-[#1B6B35] text-white text-xl font-bold">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-pkk text-white text-xl font-bold">{initials}</AvatarFallback>
             </Avatar>
             <div>
               <h2 className="text-lg font-semibold text-gray-800">{user.full_name}</h2>
               <p className="text-sm text-gray-500">{user.email}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-[#EAF5EC] text-[#1B6B35] border-[#52B788]">{ROLE_LABELS[user.role]}</Badge>
-                {pokja && <Badge variant="outline" className="border-[#52B788] text-[#2E8B57]">{pokja.name}</Badge>}
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <Badge variant="outline" className={BADGE_PERAN[user.role]}>{LABEL_PERAN[user.role]}</Badge>
+                {pokja && <Badge variant="outline" className="border-pkk-soft text-pkk-accent">{pokja.name}</Badge>}
               </div>
+              {/* Halaman ini punya ruang, jadi peran dijelaskan — bukan sekadar
+                  namanya. Label pendek saja menyisakan pertanyaan "saya boleh
+                  apa?", yang dulu dijawab setengah lewat label "Viewer /
+                  Pimpinan" yang hanya ada di halaman ini. */}
+              <p className="mt-1.5 text-xs text-gray-500">{KETERANGAN_PERAN[user.role]}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-[#1B6B35]">Informasi Dasar</CardTitle>
+          <CardTitle className="text-base text-pkk">Informasi Dasar</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSaveName} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Nama Lengkap</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} className="border-[#d1e8d5]" />
+              <Input value={name} onChange={e => setName(e.target.value)} className="border-pkk-border" />
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input value={user.email} disabled className="border-[#d1e8d5] bg-gray-50 text-gray-400" />
+              <Input value={user.email} disabled className="border-pkk-border bg-gray-50 text-gray-400" />
               <p className="text-xs text-gray-400">Email tidak dapat diubah. Hubungi Administrator jika perlu perubahan.</p>
             </div>
-            <Button type="submit" className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSavingName}>
+            <Button type="submit" className="bg-pkk hover:bg-pkk-hover" disabled={isSavingName}>
               {isSavingName ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-1" /> Simpan Nama</>}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-[#1B6B35]">Ubah Password</CardTitle>
+          <CardTitle className="text-base text-pkk">Ubah Password</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSavePassword} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Password Saat Ini</Label>
               <div className="relative">
-                <Input type={showPass ? 'text' : 'password'} value={currentPass} onChange={e => setCurrentPass(e.target.value)} className="border-[#d1e8d5] pr-10" placeholder="••••••••" />
+                <Input type={showPass ? 'text' : 'password'} value={currentPass} onChange={e => setCurrentPass(e.target.value)} className="border-pkk-border pr-10" placeholder="••••••••" />
                 <Button type="button" variant="ghost" size="icon-xs" aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'} onClick={() => setShowPass(!showPass)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-transparent">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </Button>
               </div>
             </div>
-            <Separator className="bg-[#EAF5EC]" />
+            <Separator className="bg-pkk-tint" />
             <div className="space-y-1.5">
               <Label>Password Baru</Label>
-              <Input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} className="border-[#d1e8d5]" placeholder="Min. 6 karakter" />
+              <Input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} className="border-pkk-border" placeholder="Min. 6 karakter" />
             </div>
             <div className="space-y-1.5">
               <Label>Konfirmasi Password Baru</Label>
-              <Input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="border-[#d1e8d5]" placeholder="Ulangi password baru" />
+              <Input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="border-pkk-border" placeholder="Ulangi password baru" />
             </div>
-            <Button type="submit" className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSavingPass}>
+            <Button type="submit" className="bg-pkk hover:bg-pkk-hover" disabled={isSavingPass}>
               {isSavingPass ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-1" /> Ubah Password</>}
             </Button>
           </form>

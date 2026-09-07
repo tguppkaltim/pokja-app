@@ -41,7 +41,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6FBF7] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-pkk-surface flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Logo & Title */}
         <div className="text-center space-y-3">
@@ -49,16 +49,16 @@ export default function LoginPage() {
             <img src="/logo-pemprov.png" alt="Logo Pemprov Kaltim" className="h-20 w-auto" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#1B6B35]">SIM PKK Kalimantan Timur</h1>
+            <h1 className="text-2xl font-bold text-pkk">SIM PKK Kalimantan Timur</h1>
             <p className="text-sm text-gray-500">
               Sistem Informasi Manajemen
             </p>
           </div>
         </div>
 
-        <Card className="shadow-md border-[#d1e8d5]">
+        <Card className="shadow-md border-pkk-border">
           <CardHeader className="pb-4">
-            <CardTitle className="text-[#1B6B35] text-lg">
+            <CardTitle className="text-pkk text-lg">
               Masuk ke Sistem
             </CardTitle>
             <CardDescription>
@@ -76,7 +76,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
-                  className="border-[#d1e8d5] focus-visible:ring-[#52B788]"
+                  className="border-pkk-border focus-visible:ring-pkk-soft"
                 />
               </div>
               <div className="space-y-1.5">
@@ -89,7 +89,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    className="border-[#d1e8d5] focus-visible:ring-[#52B788] pr-10"
+                    className="border-pkk-border focus-visible:ring-pkk-soft pr-10"
                   />
                   <Button
                     type="button"
@@ -116,7 +116,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-[#1B6B35] hover:bg-[#134D26] text-white"
+                className="w-full bg-pkk hover:bg-pkk-hover text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -130,7 +130,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-4 pt-4 border-t border-[#EAF5EC]">
+            <div className="mt-4 pt-4 border-t border-pkk-tint">
               <p className="text-xs text-gray-400 text-center">
                 Lupa password? Hubungi Administrator sistem.
               </p>

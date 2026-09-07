@@ -7,6 +7,27 @@
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+    /* Warna merek didaftarkan sebagai warna Tailwind, bukan dipakai lewat
+       nilai sembarang `bg-[var(--pkk-primary)]`. Alasannya bukan kerapian:
+       pada utilitas yang ambigu seperti `border-[...]` dan `text-[...]`,
+       Tailwind menebak jenisnya dari isi kurung — hex terbaca sebagai warna,
+       tapi var() tidak, sehingga `border-[var(--x)]` gagal jadi warna garis.
+       Sebagai token, `border-pkk-border` dan `text-pkk` tidak ambigu. */
+    --color-pkk: var(--pkk-primary);
+    --color-pkk-hover: var(--pkk-hover);
+    --color-pkk-accent: var(--pkk-accent);
+    --color-pkk-soft: var(--pkk-soft);
+    --color-pkk-border: var(--pkk-border);
+    --color-pkk-tint: var(--pkk-tint);
+    --color-pkk-surface: var(--pkk-surface);
+    --color-pkk-muted: var(--pkk-muted-fg);
+    --color-status-success: var(--status-success);
+    --color-status-success-tint: var(--status-success-tint);
+    --color-status-danger: var(--status-danger);
+    --color-status-danger-tint: var(--status-danger-tint);
+    --color-status-warning: var(--status-warning);
+    --color-status-warning-tint: var(--status-warning-tint);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,38 +69,81 @@
 }
 
 :root {
-    --background: #F6FBF7;
+    /* ── Warna merek PKK ──────────────────────────────────────────────────
+       Satu-satunya tempat warna merek didefinisikan. Seluruh aplikasi
+       merujuk ke sini lewat var(--pkk-*), tidak ada lagi hex yang ditulis
+       langsung di komponen — mengganti warna cukup di berkas ini.
+
+       #0047AB dan #2349B5 adalah dua kode resmi PKK dan jadi jangkarnya.
+       Sisanya diturunkan pada hue yang sama (215deg) agar satu keluarga,
+       dengan kecerahan mengikuti peran yang sama seperti palet sebelumnya.
+
+       Kontras yang sudah diperiksa (WCAG 2.1):
+         teks putih  di atas --pkk-primary   8.44:1  AAA
+         teks putih  di atas --pkk-hover    12.80:1  AAA
+         --pkk-primary di atas putih         8.44:1  AAA
+         --pkk-primary di atas --pkk-tint    7.29:1  AAA
+         --pkk-muted-fg di atas putih        5.77:1  AA  */
+    --pkk-hover: #002F70;
+    --pkk-primary: #0047AB;
+    --pkk-accent: #2349B5;
+    --pkk-soft: #5E8BC9;
+    --pkk-border: #CCD9EA;
+    --pkk-tint: #E8EFFA;
+    --pkk-surface: #F5F8FD;
+    --pkk-muted-fg: #57677D;
+
+    /* Di dalam sidebar biru pekat, penanda aktif dan garis pemisah memakai
+       putih transparan lewat pengubah opasitas Tailwind (`bg-white/18`),
+       bukan token tersendiri — lihat kelasNav() di Sidebar.tsx untuk
+       alasan kontrasnya. */
+
+    /* ── Warna status ────────────────────────────────────────────────────
+       Sengaja tidak ikut jadi biru. Sebelumnya hijau berarti "merek"
+       sekaligus "berhasil", sehingga badge terlaksana menyatu dengan
+       tombol. Setelah merek pindah ke biru, hijau berarti satu hal saja. */
+    --status-success: #15803D;
+    --status-success-tint: #E9F7EE;
+    --status-danger: #DC2626;
+    --status-danger-tint: #FDECEC;
+    --status-warning: #B45309;
+    --status-warning-tint: #FDF3E3;
+
+    /* ── Token shadcn, seluruhnya diturunkan dari yang di atas ─────────── */
+    --background: var(--pkk-surface);
     --foreground: oklch(0.145 0 0);
     --card: #ffffff;
     --card-foreground: oklch(0.145 0 0);
     --popover: #ffffff;
     --popover-foreground: oklch(0.145 0 0);
-    --primary: #1B6B35;
+    --primary: var(--pkk-primary);
     --primary-foreground: #ffffff;
-    --secondary: #EAF5EC;
-    --secondary-foreground: #1B6B35;
-    --muted: #EAF5EC;
-    --muted-foreground: #5a7a62;
-    --accent: #EAF5EC;
-    --accent-foreground: #1B6B35;
+    --secondary: var(--pkk-tint);
+    --secondary-foreground: var(--pkk-primary);
+    --muted: var(--pkk-tint);
+    --muted-foreground: var(--pkk-muted-fg);
+    --accent: var(--pkk-tint);
+    --accent-foreground: var(--pkk-primary);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: #d1e8d5;
-    --input: #d1e8d5;
-    --ring: #52B788;
-    --chart-1: #1B6B35;
-    --chart-2: #2E8B57;
-    --chart-3: #52B788;
-    --chart-4: #EAF5EC;
-    --chart-5: #134D26;
+    --border: var(--pkk-border);
+    --input: var(--pkk-border);
+    --ring: var(--pkk-soft);
+    /* Grafik membandingkan rencana vs realisasi — ukuran yang sama, jadi
+       dibedakan lewat kecerahan pada satu hue, bukan warna berbeda. */
+    --chart-1: var(--pkk-primary);
+    --chart-2: var(--pkk-accent);
+    --chart-3: var(--pkk-soft);
+    --chart-4: var(--pkk-tint);
+    --chart-5: var(--pkk-hover);
     --radius: 0.625rem;
-    --sidebar: #1B6B35;
+    --sidebar: var(--pkk-primary);
     --sidebar-foreground: #ffffff;
     --sidebar-primary: #ffffff;
-    --sidebar-primary-foreground: #1B6B35;
-    --sidebar-accent: #134D26;
+    --sidebar-primary-foreground: var(--pkk-primary);
+    --sidebar-accent: var(--pkk-hover);
     --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #134D26;
-    --sidebar-ring: #52B788;
+    --sidebar-border: var(--pkk-hover);
+    --sidebar-ring: var(--pkk-soft);
 }
 
 @layer base {
@@ -88,5 +152,41 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* ── Gerak ──────────────────────────────────────────────────────────────
+   Hanya sebagai tanggapan atas tindakan pengguna, 150-200ms. Tidak ada
+   yang bergerak sendiri: aplikasi ini dipakai berjam-jam dan animasi masuk
+   halaman jadi mengganggu setelah pembukaan kesepuluh. */
+@layer utilities {
+  /* Kartu yang bisa diklik: terangkat sedikit saat kursor di atasnya. */
+  .transisi-kartu {
+    transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
+  }
+  .transisi-kartu:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Tombol dan baris tabel: cukup warna, tanpa perpindahan posisi. */
+  .transisi-warna {
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  }
+}
+
+/* Sistem operasi bisa diminta menekan animasi — hormati itu. Perubahan
+   warna tetap terjadi, hanya seketika, sehingga umpan balik hover tidak
+   hilang bagi yang sensitif terhadap gerak. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .transisi-kartu:hover {
+    transform: none;
   }
 }

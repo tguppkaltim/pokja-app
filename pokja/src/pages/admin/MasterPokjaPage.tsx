@@ -74,22 +74,22 @@ export default function MasterPokjaPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B6B35]">Master Pokja</h1>
+          <h1 className="text-2xl font-bold text-pkk">Master Pokja</h1>
           <p className="text-sm text-gray-500 mt-1">Kelola data Kelompok Kerja (Pokja)</p>
         </div>
-        <Button onClick={openAdd} className="bg-[#1B6B35] hover:bg-[#134D26]">
+        <Button onClick={openAdd} className="bg-pkk hover:bg-pkk-hover">
           <Plus className="w-4 h-4 mr-1" /> Tambah Pokja
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {pokjaList.map((p, idx) => (
-          <Card key={p.id} className="border-[#d1e8d5]">
+          <Card key={p.id} className="border-pkk-border">
             <CardContent className="pt-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="w-7 h-7 bg-[#1B6B35] text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                    <span className="w-7 h-7 bg-pkk text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                       {idx + 1}
                     </span>
                     <h3 className="font-semibold text-gray-800">{p.name}</h3>
@@ -97,13 +97,13 @@ export default function MasterPokjaPage() {
                   <p className="text-sm text-gray-500 ml-9 leading-relaxed">{p.description || '-'}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" aria-label="Ubah pokja" onClick={() => openEdit(p)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                  <Button variant="ghost" size="icon" aria-label="Ubah pokja" onClick={() => openEdit(p)} className="text-pkk transisi-warna hover:bg-pkk-tint hover:text-pkk-hover">
                     <Pencil className="w-4 h-4" />
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={
-                        <Button variant="ghost" size="icon" aria-label="Hapus pokja" className="text-red-500 hover:bg-red-50 hover:text-red-600">
+                        <Button variant="ghost" size="icon" aria-label="Hapus pokja" className="text-red-500 transisi-warna hover:bg-red-50 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       }
@@ -131,21 +131,21 @@ export default function MasterPokjaPage() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-[#1B6B35]">{editItem ? 'Edit Pokja' : 'Tambah Pokja Baru'}</DialogTitle>
+            <DialogTitle className="text-pkk">{editItem ? 'Edit Pokja' : 'Tambah Pokja Baru'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Nama Pokja <span className="text-red-500">*</span></Label>
-              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="mis: Pokja V" className="border-[#d1e8d5]" />
+              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="mis: Pokja V" className="border-pkk-border" />
             </div>
             <div className="space-y-1.5">
               <Label>Deskripsi</Label>
-              <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Fokus program Pokja ini..." className="border-[#d1e8d5]" />
+              <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Fokus program Pokja ini..." className="border-pkk-border" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)} className="border-[#d1e8d5]">Batal</Button>
-            <Button onClick={handleSave} className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
+            <Button variant="outline" onClick={() => setIsOpen(false)} className="border-pkk-border">Batal</Button>
+            <Button onClick={handleSave} className="bg-pkk hover:bg-pkk-hover" disabled={isSaving}>
               {isSaving ? 'Menyimpan...' : editItem ? 'Simpan' : 'Tambahkan'}
             </Button>
           </DialogFooter>

@@ -9,9 +9,9 @@ export const STATUS_LABEL: Record<StatusTindakLanjut, string> = {
 }
 
 export const STATUS_BADGE: Record<StatusTindakLanjut, string> = {
-  open: 'bg-red-100 text-red-700 border-red-200',
-  on_progress: 'bg-amber-100 text-amber-700 border-amber-200',
-  closed: 'bg-green-100 text-green-700 border-green-200',
+  open: 'bg-status-danger-tint text-status-danger border-status-danger/25',
+  on_progress: 'bg-status-warning-tint text-status-warning border-status-warning/25',
+  closed: 'bg-status-success-tint text-status-success border-status-success/25',
   dibatalkan: 'bg-gray-100 text-gray-500 border-gray-200',
 }
 

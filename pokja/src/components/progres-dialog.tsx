@@ -84,7 +84,7 @@ export function ProgresDialog({
     <Dialog open onOpenChange={terbuka => { if (!terbuka) onTutup() }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-[#1B6B35]">Tambah Progress</DialogTitle>
+          <DialogTitle className="text-pkk">Tambah Progress</DialogTitle>
           <DialogDescription className="line-clamp-2">{tindakLanjut.uraian}</DialogDescription>
         </DialogHeader>
 
@@ -92,7 +92,7 @@ export function ProgresDialog({
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select items={STATUS_ITEMS} value={status} onValueChange={v => v && setStatus(v as StatusTindakLanjut)}>
-              <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="border-pkk-border"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {STATUS_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
@@ -110,15 +110,15 @@ export function ProgresDialog({
               placeholder="Apa yang sudah dikerjakan, kendalanya, atau hasilnya..."
               value={catatan}
               onChange={e => setCatatan(e.target.value)}
-              className="border-[#d1e8d5] min-h-24"
+              className="border-pkk-border min-h-24"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label>Foto Bukti <span className="text-xs font-normal text-gray-400">(opsional)</span></Label>
             {foto ? (
-              <div className="flex items-center gap-3 bg-[#F6FBF7] border border-[#d1e8d5] rounded-lg px-3 py-2">
-                <ImageIcon className="w-4 h-4 text-[#2E8B57] shrink-0" />
+              <div className="flex items-center gap-3 bg-pkk-surface border border-pkk-border rounded-lg px-3 py-2">
+                <ImageIcon className="w-4 h-4 text-pkk-accent shrink-0" />
                 <span className="text-sm text-gray-700 flex-1 truncate">{foto.name}</span>
                 <span className="text-xs text-gray-400">{(foto.size / 1024).toFixed(0)} KB</span>
                 <Button type="button" variant="ghost" size="icon-xs" aria-label="Hapus foto" onClick={() => setFoto(null)} className="text-gray-400 hover:bg-red-50 hover:text-red-500">
@@ -126,8 +126,8 @@ export function ProgresDialog({
                 </Button>
               </div>
             ) : (
-              <label className="flex items-center justify-center w-full h-16 border-2 border-dashed border-[#52B788] rounded-lg cursor-pointer hover:bg-[#EAF5EC]/50 transition-colors">
-                <span className="text-sm text-[#2E8B57]">Pilih foto — JPG, PNG, WEBP. Maks 5 MB.</span>
+              <label className="flex items-center justify-center w-full h-16 border-2 border-dashed border-pkk-soft rounded-lg cursor-pointer hover:bg-pkk-tint/50 transition-colors">
+                <span className="text-sm text-pkk-accent">Pilih foto — JPG, PNG, WEBP. Maks 5 MB.</span>
                 <input
                   type="file"
                   className="hidden"
@@ -141,7 +141,7 @@ export function ProgresDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onTutup}>Batal</Button>
-          <Button onClick={simpan} disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+          <Button onClick={simpan} disabled={isSaving} className="bg-pkk hover:bg-pkk-hover">
             {isSaving ? 'Menyimpan...' : 'Simpan Progress'}
           </Button>
         </DialogFooter>

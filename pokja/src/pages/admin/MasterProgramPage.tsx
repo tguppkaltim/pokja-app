@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,6 +19,7 @@ import {
 } from '@/lib/db'
 import type { ProgramPokok, ProgramUnggulan, ProgramPrioritas } from '@/types'
 import { bandingkanPokok } from '@/lib/master-program'
+import { BadgePeringatan } from '@/components/badge-status'
 import { toast } from 'sonner'
 
 /**
@@ -129,7 +130,7 @@ export default function MasterProgramPage() {
     return (
       <AlertDialog>
         <AlertDialogTrigger render={
-          <Button variant="ghost" size="icon" aria-label={`Hapus ${JUDUL[kind]}`} className="size-7 text-red-500 hover:bg-red-50 hover:text-red-600">
+          <Button variant="ghost" size="icon" aria-label={`Hapus ${JUDUL[kind]}`} className="size-7 text-red-500 transisi-warna hover:bg-red-50 hover:text-red-600">
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         } />
@@ -152,14 +153,14 @@ export default function MasterProgramPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">Master Program</h1>
+        <h1 className="text-2xl font-bold text-pkk">Master Program</h1>
         <p className="text-sm text-gray-500 mt-1">
           Bidang › Program Pokok › Program Unggulan › Program Prioritas, mengikuti master TP PKK Kalimantan Timur.
         </p>
       </div>
 
       <Select items={pokjaFilterItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
-        <SelectTrigger className="w-52 border-[#d1e8d5]"><SelectValue placeholder="Filter Bidang" /></SelectTrigger>
+        <SelectTrigger className="w-52 border-pkk-border"><SelectValue placeholder="Filter Bidang" /></SelectTrigger>
         <SelectContent>
           {pokjaFilterItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
         </SelectContent>
@@ -169,11 +170,11 @@ export default function MasterProgramPage() {
         {bidangTampil.map(bidang => {
           const daftarPokok = programPokok.filter(p => p.pokja_id === bidang.id).sort(bandingkanPokok)
           return (
-            <Card key={bidang.id} className="border-[#d1e8d5]">
+            <Card key={bidang.id} className="border-pkk-border">
               <CardContent className="pt-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="bg-[#1B6B35] text-white">{bidang.name}</Badge>
+                    <Badge className="bg-pkk text-white">{bidang.name}</Badge>
                     {bidang.nama_lengkap && bidang.nama_lengkap !== bidang.name && (
                       <span className="text-xs text-gray-500">{bidang.nama_lengkap}</span>
                     )}
@@ -182,7 +183,7 @@ export default function MasterProgramPage() {
                   <Button
                     variant="outline" size="sm"
                     onClick={() => buka({ kind: 'pokok', item: null, pokjaId: bidang.id })}
-                    className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC]"
+                    className="border-pkk-soft text-pkk hover:bg-pkk-tint"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1" /> Program Pokok
                   </Button>
@@ -195,7 +196,7 @@ export default function MasterProgramPage() {
                 {daftarPokok.map(pokok => {
                   const daftarUnggulan = programUnggulan.filter(u => u.program_pokok_id === pokok.id).sort(urut)
                   return (
-                    <div key={pokok.id} className="rounded-lg border border-[#EAF5EC] bg-[#F6FBF7] p-3 space-y-2">
+                    <div key={pokok.id} className="rounded-lg border border-pkk-tint bg-pkk-surface p-3 space-y-2">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0 flex items-start gap-2">
                           <span className="text-xs text-gray-400 pt-0.5 w-5 shrink-0 text-center">
@@ -204,18 +205,17 @@ export default function MasterProgramPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-gray-800">{pokok.name}</p>
                             {pokok.di_luar_master && (
-                              <Badge
-                                variant="outline"
+                              <BadgePeringatan
                                 title="Tidak ada di master resmi, tapi masih dipakai kegiatan lama."
-                                className="mt-1 gap-1 border-amber-300 bg-amber-50 text-amber-700 text-[11px] font-normal"
+                                className="mt-1 text-[11px]"
                               >
-                                <AlertTriangle className="w-3 h-3" /> Di luar master
-                              </Badge>
+                                Di luar master
+                              </BadgePeringatan>
                             )}
                           </div>
                         </div>
                         <div className="flex shrink-0 gap-1">
-                          <Button variant="ghost" size="icon" aria-label="Ubah Program Pokok" onClick={() => buka({ kind: 'pokok', item: pokok, pokjaId: bidang.id })} className="size-7 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                          <Button variant="ghost" size="icon" aria-label="Ubah Program Pokok" onClick={() => buka({ kind: 'pokok', item: pokok, pokjaId: bidang.id })} className="size-7 text-pkk transisi-warna hover:bg-pkk-tint hover:text-pkk-hover">
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
                           <TombolHapus kind="pokok" id={pokok.id} nama={pokok.name} ikutan="beserta seluruh program unggulan dan prioritas di bawahnya" />
@@ -224,7 +224,7 @@ export default function MasterProgramPage() {
 
                       {(pokok.indikator || pokok.sasaran) && (
                         <details className="text-xs text-gray-600 pl-7">
-                          <summary className="cursor-pointer text-[#1B6B35]">Indikator &amp; sasaran</summary>
+                          <summary className="cursor-pointer text-pkk">Indikator &amp; sasaran</summary>
                           <div className="grid gap-3 pt-2 sm:grid-cols-2">
                             {pokok.indikator && (
                               <div>
@@ -246,19 +246,19 @@ export default function MasterProgramPage() {
                         {daftarUnggulan.map(unggulan => {
                           const daftarPrioritas = programPrioritas.filter(p => p.program_unggulan_id === unggulan.id).sort(urut)
                           return (
-                            <div key={unggulan.id} className="rounded-md border border-[#d1e8d5] bg-white p-2.5 space-y-1.5">
+                            <div key={unggulan.id} className="rounded-md border border-pkk-border bg-white p-2.5 space-y-1.5">
                               <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div className="min-w-0 flex items-center gap-2">
                                   <p className="text-sm text-gray-700">{unggulan.name}</p>
-                                  <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-[11px] font-normal">
+                                  <Badge variant="outline" className="border-pkk-soft text-pkk-accent text-[11px] font-normal">
                                     {unggulan.asal}
                                   </Badge>
                                 </div>
                                 <div className="flex shrink-0 gap-1">
-                                  <Button variant="ghost" size="icon" aria-label="Tambah Program Prioritas" onClick={() => buka({ kind: 'prioritas', item: null, unggulanId: unggulan.id })} className="size-7 text-[#1B6B35] hover:bg-[#EAF5EC]">
+                                  <Button variant="ghost" size="icon" aria-label="Tambah Program Prioritas" onClick={() => buka({ kind: 'prioritas', item: null, unggulanId: unggulan.id })} className="size-7 text-pkk hover:bg-pkk-tint">
                                     <Plus className="w-3.5 h-3.5" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" aria-label="Ubah Program Unggulan" onClick={() => buka({ kind: 'unggulan', item: unggulan, pokokId: pokok.id })} className="size-7 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                                  <Button variant="ghost" size="icon" aria-label="Ubah Program Unggulan" onClick={() => buka({ kind: 'unggulan', item: unggulan, pokokId: pokok.id })} className="size-7 text-pkk transisi-warna hover:bg-pkk-tint hover:text-pkk-hover">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </Button>
                                   <TombolHapus kind="unggulan" id={unggulan.id} nama={unggulan.name} ikutan="beserta seluruh program prioritas di bawahnya" />
@@ -277,14 +277,14 @@ export default function MasterProgramPage() {
                                           <p className="text-xs text-gray-700">{prioritas.name}</p>
                                           {prioritas.contoh_kegiatan && (
                                             <details className="text-[11px] text-gray-500">
-                                              <summary className="cursor-pointer text-[#1B6B35]">Contoh kegiatan</summary>
+                                              <summary className="cursor-pointer text-pkk">Contoh kegiatan</summary>
                                               <p className="whitespace-pre-line pt-0.5">{prioritas.contoh_kegiatan}</p>
                                             </details>
                                           )}
                                         </div>
                                       </div>
                                       <div className="flex shrink-0 gap-1">
-                                        <Button variant="ghost" size="icon" aria-label="Ubah Program Prioritas" onClick={() => buka({ kind: 'prioritas', item: prioritas, unggulanId: unggulan.id })} className="size-6 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                                        <Button variant="ghost" size="icon" aria-label="Ubah Program Prioritas" onClick={() => buka({ kind: 'prioritas', item: prioritas, unggulanId: unggulan.id })} className="size-6 text-pkk transisi-warna hover:bg-pkk-tint hover:text-pkk-hover">
                                           <Pencil className="w-3 h-3" />
                                         </Button>
                                         <TombolHapus kind="prioritas" id={prioritas.id} nama={prioritas.name} />
@@ -300,7 +300,7 @@ export default function MasterProgramPage() {
                         <Button
                           variant="ghost" size="sm"
                           onClick={() => buka({ kind: 'unggulan', item: null, pokokId: pokok.id })}
-                          className="h-7 text-xs text-[#1B6B35] hover:bg-[#EAF5EC]"
+                          className="h-7 text-xs text-pkk hover:bg-pkk-tint"
                         >
                           <Plus className="w-3.5 h-3.5 mr-1" /> Program Unggulan
                         </Button>
@@ -323,7 +323,7 @@ export default function MasterProgramPage() {
       <Dialog open={editor !== null} onOpenChange={terbuka => !terbuka && setEditor(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-[#1B6B35]">
+            <DialogTitle className="text-pkk">
               {editor?.item ? `Edit ${JUDUL[editor.kind]}` : `Tambah ${editor ? JUDUL[editor.kind] : ''}`}
             </DialogTitle>
           </DialogHeader>
@@ -333,7 +333,7 @@ export default function MasterProgramPage() {
               <Textarea
                 value={form.name}
                 onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                className="border-[#d1e8d5] min-h-16"
+                className="border-pkk-border min-h-16"
               />
             </div>
 
@@ -345,7 +345,7 @@ export default function MasterProgramPage() {
                     value={form.indikator}
                     onChange={e => setForm(p => ({ ...p, indikator: e.target.value }))}
                     placeholder={'- Jumlah Kegiatan\n- Persentase Capaian'}
-                    className="border-[#d1e8d5] min-h-24"
+                    className="border-pkk-border min-h-24"
                   />
                   <p className="text-xs text-gray-400">Satu butir per baris. Baris dipertahankan saat ditampilkan.</p>
                 </div>
@@ -355,7 +355,7 @@ export default function MasterProgramPage() {
                     value={form.sasaran}
                     onChange={e => setForm(p => ({ ...p, sasaran: e.target.value }))}
                     placeholder={'- Keluarga\n- Kader PKK'}
-                    className="border-[#d1e8d5] min-h-24"
+                    className="border-pkk-border min-h-24"
                   />
                 </div>
               </>
@@ -365,7 +365,7 @@ export default function MasterProgramPage() {
               <div className="space-y-1.5">
                 <Label>Program Pusat / Daerah</Label>
                 <Select items={ASAL_ITEMS} value={form.asal} onValueChange={v => v && setForm(p => ({ ...p, asal: v }))}>
-                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih asal program" /></SelectTrigger>
+                  <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih asal program" /></SelectTrigger>
                   <SelectContent>
                     {ASAL_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
@@ -379,7 +379,7 @@ export default function MasterProgramPage() {
                 <Textarea
                   value={form.contoh_kegiatan}
                   onChange={e => setForm(p => ({ ...p, contoh_kegiatan: e.target.value }))}
-                  className="border-[#d1e8d5] min-h-24"
+                  className="border-pkk-border min-h-24"
                 />
                 <p className="text-xs text-gray-400">
                   Acuan dari master, bukan kegiatan yang direncanakan. Rencana kegiatan tetap diisi lewat menu Rencana Kegiatan.
@@ -388,8 +388,8 @@ export default function MasterProgramPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditor(null)} className="border-[#d1e8d5]">Batal</Button>
-            <Button onClick={simpan} className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
+            <Button variant="outline" onClick={() => setEditor(null)} className="border-pkk-border">Batal</Button>
+            <Button onClick={simpan} className="bg-pkk hover:bg-pkk-hover" disabled={isSaving}>
               {isSaving ? 'Menyimpan...' : editor?.item ? 'Simpan' : 'Tambahkan'}
             </Button>
           </DialogFooter>

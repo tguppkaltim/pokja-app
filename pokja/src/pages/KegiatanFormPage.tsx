@@ -167,21 +167,21 @@ export default function KegiatanFormPage() {
         </Button>
       </div>
       <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">{isEdit ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}</h1>
+        <h1 className="text-2xl font-bold text-pkk">{isEdit ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}</h1>
         <p className="text-sm text-gray-500 mt-1">{isEdit ? 'Perbarui data rencana kegiatan.' : 'Input rencana kegiatan ke dalam POA.'}</p>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <Card className="border-[#d1e8d5]">
+        <Card className="border-pkk-border">
           <CardHeader>
-            <CardTitle className="text-base text-[#1B6B35]">Informasi Kegiatan</CardTitle>
+            <CardTitle className="text-base text-pkk">Informasi Kegiatan</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
                 <Select items={pokjaItems} value={pokjaAktif} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '', program_prioritas_id: '' }))} disabled={user?.role === 'operator'}>
-                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
+                  <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
                     {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
@@ -190,7 +190,7 @@ export default function KegiatanFormPage() {
               <div className="space-y-1.5">
                 <Label>Program Pokok <span className="text-red-500">*</span></Label>
                 <Select items={programItems} value={form.program_pokok_id} onValueChange={v => v && setForm(prev => ({ ...prev, program_pokok_id: v, program_prioritas_id: '' }))}>
-                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Program Pokok" /></SelectTrigger>
+                  <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih Program Pokok" /></SelectTrigger>
                   <SelectContent>
                     {programItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
@@ -210,7 +210,7 @@ export default function KegiatanFormPage() {
                       value={form.program_prioritas_id}
                       onValueChange={v => v && setForm(prev => ({ ...prev, program_prioritas_id: v }))}
                     >
-                      <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Program Prioritas" /></SelectTrigger>
+                      <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih Program Prioritas" /></SelectTrigger>
                       <SelectContent>
                         {jalurTersedia.map(j => (
                           <SelectItem key={j.prioritas.id} value={String(j.prioritas.id)}>
@@ -220,13 +220,13 @@ export default function KegiatanFormPage() {
                       </SelectContent>
                     </Select>
                     {jalurTerpilih && (
-                      <div className="rounded-lg border border-[#EAF5EC] bg-[#F6FBF7] px-3 py-2 space-y-1">
+                      <div className="rounded-lg border border-pkk-tint bg-pkk-surface px-3 py-2 space-y-1">
                         <p className="text-xs text-gray-500">
                           Program Unggulan: <span className="text-gray-700">{jalurTerpilih.unggulan.name}</span>
                         </p>
                         {jalurTerpilih.prioritas.contoh_kegiatan && (
                           <details className="text-xs text-gray-500">
-                            <summary className="cursor-pointer text-[#1B6B35]">Contoh kegiatan acuan</summary>
+                            <summary className="cursor-pointer text-pkk">Contoh kegiatan acuan</summary>
                             <p className="whitespace-pre-line pt-1 text-gray-600">{jalurTerpilih.prioritas.contoh_kegiatan}</p>
                           </details>
                         )}
@@ -234,7 +234,7 @@ export default function KegiatanFormPage() {
                     )}
                   </>
                 ) : (
-                  <p className="rounded-lg border border-dashed border-[#d1e8d5] px-3 py-2 text-xs text-gray-500">
+                  <p className="rounded-lg border border-dashed border-pkk-border px-3 py-2 text-xs text-gray-500">
                     Program Pokok ini belum punya Program Prioritas di master.
                     Kegiatan tetap bisa disimpan; lengkapi masternya lewat menu Master Program.
                   </p>
@@ -244,26 +244,26 @@ export default function KegiatanFormPage() {
 
             <div className="space-y-1.5">
               <Label>Nama Kegiatan <span className="text-red-500">*</span></Label>
-              <Textarea placeholder="Deskripsikan kegiatan secara singkat dan jelas..." value={form.nama_kegiatan} onChange={e => setForm(prev => ({ ...prev, nama_kegiatan: e.target.value }))} className="border-[#d1e8d5] min-h-20" />
+              <Textarea placeholder="Deskripsikan kegiatan secara singkat dan jelas..." value={form.nama_kegiatan} onChange={e => setForm(prev => ({ ...prev, nama_kegiatan: e.target.value }))} className="border-pkk-border min-h-20" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sasaran</Label>
-                <Input placeholder="Target peserta/penerima manfaat" value={form.sasaran} onChange={e => setForm(prev => ({ ...prev, sasaran: e.target.value }))} className="border-[#d1e8d5]" />
+                <Input placeholder="Target peserta/penerima manfaat" value={form.sasaran} onChange={e => setForm(prev => ({ ...prev, sasaran: e.target.value }))} className="border-pkk-border" />
               </div>
               <div className="space-y-1.5">
                 <Label>Pelaksana</Label>
-                <Input placeholder="Penanggung jawab pelaksanaan" value={form.pelaksana} onChange={e => setForm(prev => ({ ...prev, pelaksana: e.target.value }))} className="border-[#d1e8d5]" />
+                <Input placeholder="Penanggung jawab pelaksanaan" value={form.pelaksana} onChange={e => setForm(prev => ({ ...prev, pelaksana: e.target.value }))} className="border-pkk-border" />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label>Anggaran (Rp)</Label>
-              <Input type="number" placeholder="0" value={form.anggaran} onChange={e => setForm(prev => ({ ...prev, anggaran: e.target.value }))} className="border-[#d1e8d5]" min={0} />
+              <Input type="number" placeholder="0" value={form.anggaran} onChange={e => setForm(prev => ({ ...prev, anggaran: e.target.value }))} className="border-pkk-border" min={0} />
             </div>
 
-            <Separator className="bg-[#EAF5EC]" />
+            <Separator className="bg-pkk-tint" />
 
             <div className="space-y-3">
               <div>
@@ -274,16 +274,16 @@ export default function KegiatanFormPage() {
               </div>
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
-                  <DatePicker value={pickerValue} onChange={setPickerValue} placeholder="Pilih tanggal..." className="border-[#d1e8d5]" />
+                  <DatePicker value={pickerValue} onChange={setPickerValue} placeholder="Pilih tanggal..." className="border-pkk-border" />
                 </div>
-                <Button type="button" onClick={() => addJadwal(pickerValue)} disabled={!pickerValue} variant="outline" className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC] shrink-0">
+                <Button type="button" onClick={() => addJadwal(pickerValue)} disabled={!pickerValue} variant="outline" className="border-pkk-soft text-pkk hover:bg-pkk-tint shrink-0">
                   <Plus className="w-4 h-4 mr-1" /> Tambah
                 </Button>
               </div>
               {form.jadwal.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {form.jadwal.map(tanggal => (
-                    <Badge key={tanggal} className="gap-1.5 rounded-full bg-[#1B6B35] pl-3 pr-1.5 py-1 text-sm text-white [a&]:hover:bg-[#1B6B35]">
+                    <Badge key={tanggal} className="gap-1.5 rounded-full bg-pkk pl-3 pr-1.5 py-1 text-sm text-white [a&]:hover:bg-pkk">
                       <span>{formatTanggalPanjang(tanggal)}</span>
                       <button
                         type="button"
@@ -297,7 +297,7 @@ export default function KegiatanFormPage() {
                   ))}
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-[#d1e8d5] rounded-lg py-4 text-center text-sm text-gray-400">
+                <div className="border-2 border-dashed border-pkk-border rounded-lg py-4 text-center text-sm text-gray-400">
                   Belum ada jadwal. Pilih tanggal lalu klik Tambah.
                 </div>
               )}
@@ -306,8 +306,8 @@ export default function KegiatanFormPage() {
         </Card>
 
         <div className="flex justify-end gap-3 mt-4">
-          <Button type="button" variant="outline" onClick={() => navigate(-1)} className="border-[#d1e8d5]">Batal</Button>
-          <Button type="submit" className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
+          <Button type="button" variant="outline" onClick={() => navigate(-1)} className="border-pkk-border">Batal</Button>
+          <Button type="submit" className="bg-pkk hover:bg-pkk-hover" disabled={isSaving}>
             {isSaving ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-1" /> {isEdit ? 'Simpan Perubahan' : 'Tambahkan Kegiatan'}</>}
           </Button>
         </div>

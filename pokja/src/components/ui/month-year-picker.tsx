@@ -72,7 +72,7 @@ export function MonthYearPicker({
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-semibold text-[#1B6B35]">{viewYear}</span>
+          <span className="text-sm font-semibold text-pkk">{viewYear}</span>
           <button
             type="button"
             onClick={() => setViewYear(y => Math.min(maxYear, y + 1))}
@@ -96,8 +96,8 @@ export function MonthYearPicker({
                 className={cn(
                   'h-9 rounded-lg text-sm font-medium transition-colors',
                   isSelected
-                    ? 'bg-[#1B6B35] text-white'
-                    : 'hover:bg-[#EAF5EC] hover:text-[#1B6B35] text-gray-700'
+                    ? 'bg-pkk text-white'
+                    : 'hover:bg-pkk-tint hover:text-pkk text-gray-700'
                 )}
               >
                 {bln}

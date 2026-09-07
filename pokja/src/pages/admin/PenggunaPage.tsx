@@ -12,18 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useData } from '@/contexts/data-context'
 import { fetchProfiles, updateProfile } from '@/lib/db'
 import { buatPengguna, setAktifPengguna, resetPasswordPengguna } from '@/lib/admin-users'
-import type { User } from '@/types'
+import type { User, UserRole } from '@/types'
 import { toast } from 'sonner'
-
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Super Admin',
-  sekretariat: 'Sekretariat',
-  operator: 'Operator Pokja',
-  viewer: 'Viewer',
-}
+import { LABEL_PERAN, BADGE_PERAN } from '@/lib/peran'
 
 // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
-const ROLE_ITEMS = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))
+const ROLE_ITEMS = (Object.keys(LABEL_PERAN) as UserRole[])
+  .map(value => ({ value, label: LABEL_PERAN[value] }))
 const ROLE_FILTER_ITEMS = [{ value: 'all', label: 'Semua Role' }, ...ROLE_ITEMS]
 
 export default function PenggunaPage() {
@@ -150,10 +145,10 @@ export default function PenggunaPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B6B35]">Manajemen Pengguna</h1>
+          <h1 className="text-2xl font-bold text-pkk">Manajemen Pengguna</h1>
           <p className="text-sm text-gray-500 mt-1">Kelola akun pengguna sistem</p>
         </div>
-        <Button onClick={() => setTambahTerbuka(true)} className="bg-[#1B6B35] hover:bg-[#134D26]">
+        <Button onClick={() => setTambahTerbuka(true)} className="bg-pkk hover:bg-pkk-hover">
           <Plus className="w-4 h-4 mr-1" /> Tambah Pengguna
         </Button>
       </div>
@@ -161,21 +156,21 @@ export default function PenggunaPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="Cari nama atau email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 border-[#d1e8d5]" />
+          <Input placeholder="Cari nama atau email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 border-pkk-border" />
         </div>
         <Select items={ROLE_FILTER_ITEMS} value={filterRole} onValueChange={v => v && setFilterRole(v)}>
-          <SelectTrigger className="w-44 border-[#d1e8d5]"><SelectValue placeholder="Filter role" /></SelectTrigger>
+          <SelectTrigger className="w-44 border-pkk-border"><SelectValue placeholder="Filter role" /></SelectTrigger>
           <SelectContent>
             {ROLE_FILTER_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+              <TableRow className="bg-pkk-hover hover:bg-pkk-hover border-b-0">
                 <TableHead className="text-white">Pengguna</TableHead>
                 <TableHead className="text-white hidden sm:table-cell">Email</TableHead>
                 <TableHead className="text-white">Role</TableHead>
@@ -188,31 +183,33 @@ export default function PenggunaPage() {
               {filtered.map((u, idx) => {
                 const pokja = u.pokja_id ? pokjaList.find(p => p.id === u.pokja_id) : null
                 return (
-                  <TableRow key={u.id} className={`${idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/30'} ${!u.is_active ? 'opacity-60' : ''}`}>
+                  <TableRow key={u.id} className={`${idx % 2 === 0 ? '' : 'bg-pkk-tint/30'} ${!u.is_active ? 'opacity-60' : ''}`}>
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-[#1B6B35] text-white text-xs">{getInitials(u.full_name)}</AvatarFallback>
+                          <AvatarFallback className="bg-pkk text-white text-xs">{getInitials(u.full_name)}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium text-gray-800">{u.full_name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{u.email}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge variant="outline" className={u.role === 'super_admin' ? 'border-purple-300 text-purple-600' : u.role === 'sekretariat' ? 'border-amber-300 text-amber-600' : u.role === 'operator' ? 'border-[#52B788] text-[#2E8B57]' : 'border-blue-300 text-blue-600'}>
-                        {ROLE_LABELS[u.role]}
+                      <Badge variant="outline" className={BADGE_PERAN[u.role]}>
+                        {LABEL_PERAN[u.role]}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{pokja?.name ?? '—'}</TableCell>
                     <TableCell className="px-4 py-3 text-center">
-                      {u.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-gray-100 text-gray-500">Nonaktif</Badge>}
+                      {u.is_active
+                        ? <Badge className="bg-status-success-tint text-status-success">Aktif</Badge>
+                        : <Badge className="bg-gray-100 text-gray-500">Nonaktif</Badge>}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" aria-label="Ubah pengguna" onClick={() => openEdit(u)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                        <Button variant="ghost" size="icon" aria-label="Ubah pengguna" onClick={() => openEdit(u)} className="text-pkk transisi-warna hover:bg-pkk-tint hover:text-pkk-hover">
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" aria-label="Reset password" title="Reset Password" onClick={() => { setResetUntuk(u); setPasswordBaru('') }} className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
+                        <Button variant="ghost" size="icon" aria-label="Reset password" title="Reset Password" onClick={() => { setResetUntuk(u); setPasswordBaru('') }} className="text-status-warning transisi-warna hover:bg-status-warning-tint">
                           <KeyRound className="w-4 h-4" />
                         </Button>
                         <Button
@@ -221,7 +218,7 @@ export default function PenggunaPage() {
                           aria-label={u.is_active ? 'Nonaktifkan pengguna' : 'Aktifkan pengguna'}
                           title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                           onClick={() => toggleActive(u)}
-                          className={u.is_active ? 'text-red-500 hover:bg-red-50 hover:text-red-600' : 'text-green-600 hover:bg-green-50 hover:text-green-700'}
+                          className={u.is_active ? 'text-red-500 transisi-warna hover:bg-red-50 hover:text-red-600' : 'text-status-success transisi-warna hover:bg-status-success-tint'}
                         >
                           {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </Button>
@@ -243,21 +240,21 @@ export default function PenggunaPage() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1B6B35]">Edit Pengguna</DialogTitle>
+            <DialogTitle className="text-pkk">Edit Pengguna</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Nama Lengkap <span className="text-red-500">*</span></Label>
-              <Input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} className="border-[#d1e8d5]" />
+              <Input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} className="border-pkk-border" />
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input value={form.email} disabled className="border-[#d1e8d5] bg-gray-50 text-gray-400" />
+              <Input value={form.email} disabled className="border-pkk-border bg-gray-50 text-gray-400" />
             </div>
             <div className="space-y-1.5">
               <Label>Role <span className="text-red-500">*</span></Label>
               <Select items={ROLE_ITEMS} value={form.role} onValueChange={v => v && setForm(p => ({ ...p, role: v, pokja_id: '' }))}>
-                <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="border-pkk-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ROLE_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                 </SelectContent>
@@ -267,7 +264,7 @@ export default function PenggunaPage() {
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
                 <Select items={pokjaItems} value={form.pokja_id} onValueChange={v => v && setForm(p => ({ ...p, pokja_id: v }))}>
-                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
+                  <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
                     {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
@@ -276,8 +273,8 @@ export default function PenggunaPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)} className="border-[#d1e8d5]">Batal</Button>
-            <Button onClick={handleSave} className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isSaving}>
+            <Button variant="outline" onClick={() => setIsOpen(false)} className="border-pkk-border">Batal</Button>
+            <Button onClick={handleSave} className="bg-pkk hover:bg-pkk-hover" disabled={isSaving}>
               {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
             </Button>
           </DialogFooter>
@@ -287,20 +284,20 @@ export default function PenggunaPage() {
       <Dialog open={tambahTerbuka} onOpenChange={setTambahTerbuka}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1B6B35]">Tambah Pengguna</DialogTitle>
+            <DialogTitle className="text-pkk">Tambah Pengguna</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Nama Lengkap <span className="text-red-500">*</span></Label>
-              <Input value={formTambah.full_name} onChange={e => setFormTambah(p => ({ ...p, full_name: e.target.value }))} className="border-[#d1e8d5]" />
+              <Input value={formTambah.full_name} onChange={e => setFormTambah(p => ({ ...p, full_name: e.target.value }))} className="border-pkk-border" />
             </div>
             <div className="space-y-1.5">
               <Label>Email <span className="text-red-500">*</span></Label>
-              <Input type="email" placeholder="nama@pkk-kaltim.go.id" value={formTambah.email} onChange={e => setFormTambah(p => ({ ...p, email: e.target.value }))} className="border-[#d1e8d5]" />
+              <Input type="email" placeholder="nama@pkk-kaltim.go.id" value={formTambah.email} onChange={e => setFormTambah(p => ({ ...p, email: e.target.value }))} className="border-pkk-border" />
             </div>
             <div className="space-y-1.5">
               <Label>Password Awal <span className="text-red-500">*</span></Label>
-              <Input type="text" placeholder="Minimal 8 karakter" value={formTambah.password} onChange={e => setFormTambah(p => ({ ...p, password: e.target.value }))} className="border-[#d1e8d5]" />
+              <Input type="text" placeholder="Minimal 8 karakter" value={formTambah.password} onChange={e => setFormTambah(p => ({ ...p, password: e.target.value }))} className="border-pkk-border" />
               <p className="text-xs text-gray-400">
                 Sengaja tidak disembunyikan supaya bisa disalin. Sampaikan ke pengguna, dan minta mereka menggantinya lewat menu Profil.
               </p>
@@ -308,7 +305,7 @@ export default function PenggunaPage() {
             <div className="space-y-1.5">
               <Label>Role <span className="text-red-500">*</span></Label>
               <Select items={ROLE_ITEMS} value={formTambah.role} onValueChange={v => v && setFormTambah(p => ({ ...p, role: v, pokja_id: '' }))}>
-                <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="border-pkk-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ROLE_ITEMS.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                 </SelectContent>
@@ -318,7 +315,7 @@ export default function PenggunaPage() {
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
                 <Select items={pokjaItems} value={formTambah.pokja_id} onValueChange={v => v && setFormTambah(p => ({ ...p, pokja_id: v }))}>
-                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
+                  <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
                     {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
@@ -328,7 +325,7 @@ export default function PenggunaPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTambahTerbuka(false)}>Batal</Button>
-            <Button onClick={simpanTambah} disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+            <Button onClick={simpanTambah} disabled={isSaving} className="bg-pkk hover:bg-pkk-hover">
               {isSaving ? 'Membuat...' : 'Buat Akun'}
             </Button>
           </DialogFooter>
@@ -338,7 +335,7 @@ export default function PenggunaPage() {
       <Dialog open={resetUntuk !== null} onOpenChange={terbuka => { if (!terbuka) setResetUntuk(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1B6B35]">Reset Password</DialogTitle>
+            <DialogTitle className="text-pkk">Reset Password</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-gray-600">
@@ -346,7 +343,7 @@ export default function PenggunaPage() {
             </p>
             <div className="space-y-1.5">
               <Label>Password Baru <span className="text-red-500">*</span></Label>
-              <Input type="text" placeholder="Minimal 8 karakter" value={passwordBaru} onChange={e => setPasswordBaru(e.target.value)} className="border-[#d1e8d5]" />
+              <Input type="text" placeholder="Minimal 8 karakter" value={passwordBaru} onChange={e => setPasswordBaru(e.target.value)} className="border-pkk-border" />
               <p className="text-xs text-gray-400">
                 Diterapkan langsung tanpa email, jadi tidak bisa gagal diam-diam. Sampaikan ke pengguna yang bersangkutan.
               </p>
@@ -354,7 +351,7 @@ export default function PenggunaPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setResetUntuk(null)}>Batal</Button>
-            <Button onClick={simpanReset} disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+            <Button onClick={simpanReset} disabled={isSaving} className="bg-pkk hover:bg-pkk-hover">
               {isSaving ? 'Menyimpan...' : 'Ganti Password'}
             </Button>
           </DialogFooter>

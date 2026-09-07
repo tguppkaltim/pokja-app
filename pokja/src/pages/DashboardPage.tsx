@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
+import { KartuKPI } from '@/components/kartu-kpi'
+import { BadgeStatus } from '@/components/badge-status'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
@@ -33,19 +35,13 @@ function formatJuta(n: number) {
 // Menampilkan "0%" untuk kasus itu menyesatkan: pembaginya nol, bukan hasilnya nol.
 function serapanBadgeClass(pct: number | null) {
   if (pct === null) return 'bg-gray-100 text-gray-500'
-  if (pct >= 70) return 'bg-green-100 text-green-700'
-  if (pct >= 40) return 'bg-yellow-100 text-yellow-700'
-  return 'bg-red-100 text-red-600'
+  if (pct >= 70) return 'bg-status-success-tint text-status-success'
+  if (pct >= 40) return 'bg-status-warning-tint text-status-warning'
+  return 'bg-status-danger-tint text-status-danger'
 }
 
 function formatPct(pct: number | null) {
   return pct === null ? '—' : `${pct}%`
-}
-
-function getStatusBadge(status: string | null) {
-  if (status === 'terlaksana') return <Badge className="bg-green-100 text-green-700 border-green-200">✓ Terlaksana</Badge>
-  if (status === 'tidak_terlaksana') return <Badge className="bg-red-100 text-red-700 border-red-200">✗ Belum Terlaksana</Badge>
-  return <Badge variant="outline" className="text-gray-400 border-gray-200">⏳ Menunggu</Badge>
 }
 
 export default function DashboardPage() {
@@ -149,9 +145,9 @@ export default function DashboardPage() {
   }, [sesiDalamLingkup, realisasi, dari, sampai])
 
   const pieData = [
-    { name: 'Terlaksana', value: allScheduled.terlaksana, color: '#1B6B35' },
-    { name: 'Belum', value: allScheduled.belum, color: '#ef4444' },
-    { name: 'Akan Datang', value: allScheduled.scheduled - allScheduled.terlaksana - allScheduled.belum, color: '#93c5fd' },
+    { name: 'Terlaksana', value: allScheduled.terlaksana, color: 'var(--pkk-primary)' },
+    { name: 'Belum', value: allScheduled.belum, color: 'var(--status-danger)' },
+    { name: 'Akan Datang', value: allScheduled.scheduled - allScheduled.terlaksana - allScheduled.belum, color: 'var(--pkk-soft)' },
   ]
 
   const anggaranChartData = useMemo(() => {
@@ -188,7 +184,10 @@ export default function DashboardPage() {
       ...k,
       programName: prog?.name ?? '-',
       pokjaName: pokja?.name ?? '-',
-      statusBulanIni: r?.status ?? (scheduledThisMonth ? 'menunggu' : 'tidak_dijadwalkan'),
+      // `as const` menjaga tipenya tetap union literal. Tanpa itu properti
+      // objek melebar jadi `string`, dan pemeriksaan `!== 'tidak_dijadwalkan'`
+      // di tabel tidak bisa menyempitkannya untuk BadgeStatus.
+      statusBulanIni: r?.status ?? (scheduledThisMonth ? ('menunggu' as const) : ('tidak_dijadwalkan' as const)),
       isLate: scheduledThisMonth && !r && sampai <= bulanSudahLewat,
     }
   })
@@ -235,7 +234,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B6B35]">Dashboard Monitoring</h1>
+          <h1 className="text-2xl font-bold text-pkk">Dashboard Monitoring</h1>
           <p className="text-sm text-gray-500 mt-1">
             Tahun {tahun} — {dari === sampai
               ? `Bulan ${BULAN_LABELS[dari - 1]}`
@@ -244,21 +243,21 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Select items={tahunItems} value={filterTahun} onValueChange={v => v && setFilterTahun(v)}>
-            <SelectTrigger className="w-28 border-[#d1e8d5] text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-28 border-pkk-border text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               {tahunItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1.5">
             <Select items={bulanItems} value={dariBulan} onValueChange={v => v && gantiDari(v)}>
-              <SelectTrigger className="w-24 border-[#d1e8d5] text-sm" aria-label="Bulan awal"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-24 border-pkk-border text-sm" aria-label="Bulan awal"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <span className="text-sm text-gray-400 shrink-0">s/d</span>
             <Select items={bulanItems} value={sampaiBulan} onValueChange={v => v && gantiSampai(v)}>
-              <SelectTrigger className="w-24 border-[#d1e8d5] text-sm" aria-label="Bulan akhir"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-24 border-pkk-border text-sm" aria-label="Bulan akhir"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
@@ -266,14 +265,14 @@ export default function DashboardPage() {
           </div>
           {user?.role !== 'operator' && (
             <Select items={pokjaFilterItems} value={filterPokja} onValueChange={v => v && gantiPokja(v)}>
-              <SelectTrigger className="w-40 border-[#d1e8d5] text-sm"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
+              <SelectTrigger className="w-40 border-pkk-border text-sm"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
               <SelectContent>
                 {pokjaFilterItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
           <Select items={programItems} value={filterProgram} onValueChange={v => v && setFilterProgram(v)}>
-            <SelectTrigger className="w-52 border-[#d1e8d5] text-sm"><SelectValue placeholder="Filter Program" /></SelectTrigger>
+            <SelectTrigger className="w-52 border-pkk-border text-sm"><SelectValue placeholder="Filter Program" /></SelectTrigger>
             <SelectContent>
               {programItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
             </SelectContent>
@@ -284,141 +283,101 @@ export default function DashboardPage() {
       {belumDipetakan > 0 && bolehMemetakan && (
         <Link
           to="/kegiatan"
-          className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100"
+          className="flex items-center gap-3 rounded-lg border border-status-warning/25 bg-status-warning-tint px-4 py-3 transisi-warna hover:border-status-warning/40"
         >
-          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
+          <AlertTriangle className="w-5 h-5 shrink-0 text-status-warning" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-amber-900">
+            <p className="text-sm font-medium text-status-warning">
               {belumDipetakan} kegiatan belum dipetakan ke Program Prioritas
             </p>
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-status-warning/85">
               Kegiatan ini dibuat sebelum master program diadopsi. Buka Rencana Kegiatan lalu Edit untuk melengkapinya.
             </p>
           </div>
-          <ChevronRight className="w-4 h-4 shrink-0 text-amber-600" />
+          <ChevronRight className="w-4 h-4 shrink-0 text-status-warning" />
         </Link>
       )}
 
       {/* KPI Kegiatan */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-[#d1e8d5]">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Kegiatan</p>
-                <p className="text-3xl font-bold text-[#1B6B35] mt-1">{scopedKegiatan.length}</p>
-                <p className="text-xs text-gray-400 mt-1">{allScheduled.scheduled} sesi dijadwalkan</p>
-              </div>
-              <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-[#1B6B35]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-[#d1e8d5]">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Terlaksana</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{allScheduled.terlaksana}</p>
-                <p className="text-xs text-gray-400 mt-1">dari {allScheduled.scheduled} sesi</p>
-              </div>
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-[#d1e8d5]">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Belum Terlaksana</p>
-                <p className="text-3xl font-bold text-red-500 mt-1">{allScheduled.belum}</p>
-                <p className="text-xs text-gray-400 mt-1">sesi terlambat</p>
-              </div>
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <XCircle className="w-5 h-5 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-[#d1e8d5]">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Persentase Realisasi</p>
-                <p className="text-3xl font-bold text-[#2E8B57] mt-1">{pctRealisasi}%</p>
-                <Progress value={pctRealisasi} className="mt-2 h-2 [&>div]:bg-[#1B6B35]" />
-              </div>
-              <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-[#2E8B57]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KartuKPI
+          label="Total Kegiatan"
+          nilai={scopedKegiatan.length}
+          ikon={TrendingUp}
+          keterangan={`${allScheduled.scheduled} sesi dijadwalkan`}
+        />
+        <KartuKPI
+          label="Terlaksana"
+          nilai={allScheduled.terlaksana}
+          ikon={CheckCircle2}
+          nada="berhasil"
+          keterangan={`dari ${allScheduled.scheduled} sesi`}
+        />
+        <KartuKPI
+          label="Belum Terlaksana"
+          nilai={allScheduled.belum}
+          ikon={XCircle}
+          nada="bahaya"
+          keterangan="sesi terlambat"
+        />
+        <KartuKPI
+          label="Persentase Realisasi"
+          nilai={`${pctRealisasi}%`}
+          ikon={Clock}
+          nada="aksen"
+          keterangan={<Progress value={pctRealisasi} className="mt-1.5 h-2 [&>div]:bg-pkk" />}
+        />
       </div>
 
       {/* KPI Anggaran */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="border-[#d1e8d5]">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Rencana Anggaran</p>
-                <p className="text-2xl font-bold text-[#1B6B35] mt-1">{formatRupiah(totalRencana)}</p>
-                <p className="text-xs text-gray-400 mt-1">seluruh kegiatan tahun {tahun}</p>
-              </div>
-              <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-[#1B6B35]" />
-              </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <KartuKPI
+          label="Total Rencana Anggaran"
+          nilai={formatRupiah(totalRencana)}
+          ikon={Wallet}
+          ringkas
+          keterangan={`seluruh kegiatan tahun ${tahun}`}
+        />
+        <KartuKPI
+          label="Realisasi Anggaran"
+          nilai={formatRupiah(totalRealisasi)}
+          ikon={BadgeDollarSign}
+          nada="aksen"
+          ringkas
+          keterangan={
+            <div className="flex items-center gap-2">
+              <Progress value={pctSerapan ?? 0} className="h-2 flex-1 [&>div]:bg-pkk-accent" />
+              <span className="shrink-0 text-xs font-semibold text-pkk-accent">{formatPct(pctSerapan)}</span>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="border-[#d1e8d5]">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Realisasi Anggaran</p>
-                <p className="text-2xl font-bold text-[#2E8B57] mt-1">{formatRupiah(totalRealisasi)}</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <Progress value={pctSerapan ?? 0} className="h-2 flex-1 [&>div]:bg-[#2E8B57]" />
-                  <span className="text-xs font-semibold text-[#2E8B57] shrink-0">{formatPct(pctSerapan)}</span>
-                </div>
-              </div>
-              <div className="w-10 h-10 bg-[#EAF5EC] rounded-lg flex items-center justify-center">
-                <BadgeDollarSign className="w-5 h-5 text-[#2E8B57]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          }
+        />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2 border-[#d1e8d5]">
+        <Card className="border-pkk-border transisi-kartu hover:shadow-md lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-[#1B6B35]">Realisasi per Pokja</CardTitle>
+            <CardTitle className="text-base text-pkk">Realisasi per Pokja</CardTitle>
             <CardDescription>Persentase sesi terlaksana per Kelompok Kerja</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={pokjaChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EAF5EC" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--pkk-tint)" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} unit="%" />
                 <Tooltip
                   formatter={(val, _name, props) => [`${val}% (${props.payload.terlaksana}/${props.payload.total})`, 'Realisasi']}
-                  contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }}
+                  contentStyle={{ borderColor: 'var(--pkk-border)', borderRadius: 8 }}
                 />
-                <Bar dataKey="pct" fill="#1B6B35" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="pct" fill="var(--pkk-primary)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        <Card className="border-[#d1e8d5]">
+        <Card className="border-pkk-border transisi-kartu hover:shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-[#1B6B35]">Komposisi Status</CardTitle>
+            <CardTitle className="text-base text-pkk">Komposisi Status</CardTitle>
             <CardDescription>Semua sesi terencana</CardDescription>
           </CardHeader>
           <CardContent>
@@ -428,7 +387,7 @@ export default function DashboardPage() {
                   {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                 </Pie>
                 <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-                <Tooltip contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }} />
+                <Tooltip contentStyle={{ borderColor: 'var(--pkk-border)', borderRadius: 8 }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -436,51 +395,51 @@ export default function DashboardPage() {
       </div>
 
       {/* Line chart */}
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border transisi-kartu hover:shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base text-[#1B6B35]">Tren Realisasi Bulanan</CardTitle>
+          <CardTitle className="text-base text-pkk">Tren Realisasi Bulanan</CardTitle>
           <CardDescription>Perbandingan sesi dijadwalkan vs terlaksana ({BULAN_LABELS[dari - 1]}–{BULAN_LABELS[sampai - 1]} {tahun})</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={lineData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EAF5EC" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--pkk-tint)" />
               <XAxis dataKey="bulan" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }} />
+              <Tooltip contentStyle={{ borderColor: 'var(--pkk-border)', borderRadius: 8 }} />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="dijadwalkan" stroke="#52B788" strokeWidth={2} dot={{ r: 4 }} name="Dijadwalkan" />
-              <Line type="monotone" dataKey="terlaksana" stroke="#1B6B35" strokeWidth={2} dot={{ r: 4 }} name="Terlaksana" />
+              <Line type="monotone" dataKey="dijadwalkan" stroke="var(--pkk-soft)" strokeWidth={2} dot={{ r: 4 }} name="Dijadwalkan" />
+              <Line type="monotone" dataKey="terlaksana" stroke="var(--pkk-primary)" strokeWidth={2} dot={{ r: 4 }} name="Terlaksana" />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
       {/* Anggaran chart */}
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border transisi-kartu hover:shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base text-[#1B6B35]">Rencana vs Realisasi Anggaran per Pokja</CardTitle>
+          <CardTitle className="text-base text-pkk">Rencana vs Realisasi Anggaran per Pokja</CardTitle>
           <CardDescription>Estimasi penyerapan anggaran berdasarkan kegiatan yang terlaksana — dalam jutaan Rupiah</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={anggaranChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EAF5EC" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--pkk-tint)" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={formatJuta} width={48} />
               <Tooltip
                 formatter={(val, name) => [formatRupiah(Number(val)), name === 'rencana' ? 'Rencana Anggaran' : 'Realisasi Anggaran']}
-                contentStyle={{ borderColor: '#d1e8d5', borderRadius: 8 }}
+                contentStyle={{ borderColor: 'var(--pkk-border)', borderRadius: 8 }}
               />
               <Legend formatter={name => name === 'rencana' ? 'Rencana' : 'Realisasi'} iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="rencana" fill="#52B788" radius={[4, 4, 0, 0]} name="rencana" />
-              <Bar dataKey="realisasi" fill="#1B6B35" radius={[4, 4, 0, 0]} name="realisasi" />
+              <Bar dataKey="rencana" fill="var(--pkk-soft)" radius={[4, 4, 0, 0]} name="rencana" />
+              <Bar dataKey="realisasi" fill="var(--pkk-primary)" radius={[4, 4, 0, 0]} name="realisasi" />
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-4">
             <Table>
               <TableHeader>
-                <TableRow className="border-[#EAF5EC] hover:bg-transparent">
+                <TableRow className="border-pkk-tint hover:bg-transparent">
                   <TableHead className="px-3 text-gray-500 text-xs">Pokja</TableHead>
                   <TableHead className="px-3 text-gray-500 text-xs text-right">Rencana Anggaran</TableHead>
                   <TableHead className="px-3 text-gray-500 text-xs text-right">Realisasi Anggaran</TableHead>
@@ -488,22 +447,22 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {anggaranChartData.map((d, idx) => (
-                  <TableRow key={d.name} className={idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/30'}>
+                {anggaranChartData.map(d => (
+                  <TableRow key={d.name} className="border-pkk-tint">
                     <TableCell className="py-2 px-3 font-medium text-gray-700">{d.name}</TableCell>
                     <TableCell className="py-2 px-3 text-right text-gray-600">{formatRupiah(d.rencana)}</TableCell>
-                    <TableCell className="py-2 px-3 text-right text-[#1B6B35] font-medium">{formatRupiah(d.realisasi)}</TableCell>
+                    <TableCell className="py-2 px-3 text-right text-pkk font-medium">{formatRupiah(d.realisasi)}</TableCell>
                     <TableCell className="py-2 px-3 text-right">
                       <Badge className={`rounded-full ${serapanBadgeClass(d.pct)}`}>{formatPct(d.pct)}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
-              <TableFooter className="bg-[#EAF5EC]/60 border-t border-[#d1e8d5]">
+              <TableFooter className="bg-pkk-tint/60 border-t border-pkk-border">
                 <TableRow className="hover:bg-transparent">
                   <TableCell className="py-2 px-3 font-semibold text-gray-700">Total</TableCell>
                   <TableCell className="py-2 px-3 text-right font-semibold text-gray-700">{formatRupiah(totalRencana)}</TableCell>
-                  <TableCell className="py-2 px-3 text-right font-bold text-[#1B6B35]">{formatRupiah(totalRealisasi)}</TableCell>
+                  <TableCell className="py-2 px-3 text-right font-bold text-pkk">{formatRupiah(totalRealisasi)}</TableCell>
                   <TableCell className="py-2 px-3 text-right">
                     <Badge className={`rounded-full font-bold ${serapanBadgeClass(pctSerapan)}`}>{formatPct(pctSerapan)}</Badge>
                   </TableCell>
@@ -515,11 +474,11 @@ export default function DashboardPage() {
       </Card>
 
       {/* Tabel ringkasan kegiatan */}
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border transisi-kartu hover:shadow-md">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base text-[#1B6B35]">Ringkasan Kegiatan</CardTitle>
+              <CardTitle className="text-base text-pkk">Ringkasan Kegiatan</CardTitle>
               <CardDescription>Status kegiatan bulan {BULAN_LABELS[sampai - 1]} {tahun}</CardDescription>
             </div>
           </div>
@@ -527,7 +486,7 @@ export default function DashboardPage() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+              <TableRow className="bg-pkk-hover hover:bg-pkk-hover border-b-0">
                 <TableHead className="text-white">Kegiatan</TableHead>
                 <TableHead className="text-white hidden md:table-cell">Program Pokok</TableHead>
                 <TableHead className="text-white hidden lg:table-cell">Pokja</TableHead>
@@ -537,7 +496,7 @@ export default function DashboardPage() {
             </TableHeader>
             <TableBody>
               {tableData.map((k, idx) => (
-                <TableRow key={k.id} className={idx % 2 === 0 ? '' : 'bg-[#EAF5EC]/40'}>
+                <TableRow key={k.id} className={idx % 2 === 0 ? '' : 'bg-pkk-tint/40'}>
                   <TableCell className="px-4 py-3 whitespace-normal">
                     <div className="flex items-center gap-2">
                       {k.isLate && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
@@ -546,16 +505,16 @@ export default function DashboardPage() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 hidden md:table-cell">{k.programName}</TableCell>
                   <TableCell className="px-4 py-3 hidden lg:table-cell">
-                    <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
+                    <Badge variant="outline" className="border-pkk-soft text-pkk-accent text-xs">{k.pokjaName}</Badge>
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     {k.statusBulanIni === 'tidak_dijadwalkan'
                       ? <Badge variant="outline" className="text-gray-400 text-xs">— Tidak Dijadwalkan</Badge>
-                      : getStatusBadge(k.statusBulanIni === 'menunggu' ? null : k.statusBulanIni)
+                      : <BadgeStatus status={k.statusBulanIni} className="text-xs" />
                     }
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <Link to={`/kegiatan/${k.id}`} className="text-[#1B6B35] hover:text-[#134D26] flex items-center gap-1 text-xs">
+                    <Link to={`/kegiatan/${k.id}`} className="text-pkk hover:text-pkk-hover flex items-center gap-1 text-xs">
                       Detail <ChevronRight className="w-3 h-3" />
                     </Link>
                   </TableCell>

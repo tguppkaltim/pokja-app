@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn, formatTanggalPanjang } from '@/lib/utils'
 import { jalurPrioritas } from '@/lib/master-program'
+import { BadgeStatus, BadgePeringatan } from '@/components/badge-status'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal } from '@/lib/db'
@@ -16,12 +17,6 @@ import { BULAN_FULL } from '@/lib/kalender'
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'terlaksana') return <Badge className="bg-green-100 text-green-700 border-green-200">✓ Terlaksana</Badge>
-  if (status === 'tidak_terlaksana') return <Badge className="bg-red-100 text-red-700 border-red-200">✗ Tidak Terlaksana</Badge>
-  return <Badge variant="outline" className="text-gray-400">—</Badge>
 }
 
 export default function KegiatanDetailPage() {
@@ -60,7 +55,7 @@ export default function KegiatanDetailPage() {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500">Kegiatan tidak ditemukan.</p>
-        <Button onClick={() => navigate(-1)} variant="ghost" className="text-[#1B6B35] mt-2">Kembali</Button>
+        <Button onClick={() => navigate(-1)} variant="ghost" className="text-pkk mt-2">Kembali</Button>
       </div>
     )
   }
@@ -86,27 +81,23 @@ export default function KegiatanDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-1" /> Kembali
         </Button>
         {canEdit && (
-          <Link to={`/kegiatan/${kegiatan.id}/edit`} className={cn(buttonVariants({ size: 'sm' }), 'bg-[#1B6B35] hover:bg-[#134D26] text-white')}>
+          <Link to={`/kegiatan/${kegiatan.id}/edit`} className={cn(buttonVariants({ size: 'sm' }), 'bg-pkk hover:bg-pkk-hover text-white')}>
             <Pencil className="w-4 h-4 mr-1" /> Edit Kegiatan
           </Link>
         )}
       </div>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
             <div className="flex-1">
               <div className="flex flex-wrap gap-2 mb-2">
-                <Badge variant="outline" className="border-[#52B788] text-[#2E8B57]">{pokja?.name}</Badge>
-                <Badge className="bg-[#EAF5EC] text-[#1B6B35]">{program?.name}</Badge>
+                <Badge variant="outline" className="border-pkk-soft text-pkk-accent">{pokja?.name}</Badge>
+                <Badge className="bg-pkk-tint text-pkk">{program?.name}</Badge>
                 {!jalur && (
-                  <Badge
-                    variant="outline"
-                    title="Kegiatan ini dibuat sebelum master program diadopsi."
-                    className="gap-1 border-amber-300 bg-amber-50 text-amber-700 font-normal"
-                  >
-                    <AlertTriangle className="w-3 h-3" /> Belum dipetakan
-                  </Badge>
+                  <BadgePeringatan title="Kegiatan ini dibuat sebelum master program diadopsi.">
+                    Belum dipetakan
+                  </BadgePeringatan>
                 )}
               </div>
               {jalur && (
@@ -122,32 +113,32 @@ export default function KegiatanDetailPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-start gap-2 text-sm">
-              <User className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
+              <User className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div><p className="text-gray-400 text-xs">Sasaran</p><p className="text-gray-700">{kegiatan.sasaran || '-'}</p></div>
             </div>
             <div className="flex items-start gap-2 text-sm">
-              <Building2 className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
+              <Building2 className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div><p className="text-gray-400 text-xs">Pelaksana</p><p className="text-gray-700">{kegiatan.pelaksana || '-'}</p></div>
             </div>
             <div className="flex items-start gap-2 text-sm">
-              <DollarSign className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
+              <DollarSign className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div>
                 <p className="text-gray-400 text-xs">Anggaran</p>
                 <p className="text-gray-700 font-medium">{formatRupiah(kegiatan.anggaran)} <span className="text-xs font-normal text-gray-400">rencana</span></p>
-                <p className="text-[#1B6B35] font-medium">
+                <p className="text-pkk font-medium">
                   {formatRupiah(anggaranAktual)} <span className="text-xs font-normal text-gray-400">aktual &middot; serapan {pctSerapan === null ? '—' : `${pctSerapan}%`}</span>
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-2 text-sm">
-              <FileText className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
+              <FileText className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div><p className="text-gray-400 text-xs">Tahun</p><p className="text-gray-700">{kegiatan.tahun}</p></div>
             </div>
           </div>
-          <Separator className="bg-[#EAF5EC]" />
+          <Separator className="bg-pkk-tint" />
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-[#2E8B57]" />
+              <Calendar className="w-4 h-4 text-pkk-accent" />
               <p className="text-sm font-medium text-gray-700">Jadwal Pelaksanaan</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -157,7 +148,7 @@ export default function KegiatanDetailPage() {
                 return (
                   <span
                     key={j.id}
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${sudah ? 'bg-[#1B6B35] text-white' : 'bg-gray-100 text-gray-500'}`}
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${sudah ? 'bg-pkk text-white' : 'bg-gray-100 text-gray-500'}`}
                   >
                     {formatTanggalPanjang(j.tanggal)}
                   </span>
@@ -168,12 +159,12 @@ export default function KegiatanDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base text-[#1B6B35]">Riwayat Realisasi {kegiatan.tahun}</CardTitle>
+            <CardTitle className="text-base text-pkk">Riwayat Realisasi {kegiatan.tahun}</CardTitle>
             {canEdit && (
-              <Link to="/realisasi" className="text-sm text-[#1B6B35] border border-[#52B788] hover:bg-[#EAF5EC] px-3 py-1 rounded-lg transition-colors">
+              <Link to="/realisasi" className="text-sm text-pkk border border-pkk-soft hover:bg-pkk-tint px-3 py-1 rounded-lg transition-colors">
                 + Input Realisasi
               </Link>
             )}
@@ -187,7 +178,7 @@ export default function KegiatanDetailPage() {
               {realisasiList.map(r => {
                 const evidences = evidenceMap[r.id] ?? []
                 return (
-                  <div key={r.id} className="border border-[#d1e8d5] rounded-lg p-4 space-y-2">
+                  <div key={r.id} className="border border-pkk-border rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         {/* Judul memakai tanggal sesi, bukan bulan: satu bulan kini
@@ -203,18 +194,18 @@ export default function KegiatanDetailPage() {
                           </p>
                         )}
                       </div>
-                      <StatusBadge status={r.status} />
+                      <BadgeStatus status={r.status} />
                     </div>
                     {r.status === 'terlaksana' && (
                       <p className="text-xs text-gray-500">
-                        Anggaran aktual: <span className="font-medium text-[#1B6B35]">{formatRupiah(r.anggaran_aktual)}</span>
+                        Anggaran aktual: <span className="font-medium text-pkk">{formatRupiah(r.anggaran_aktual)}</span>
                       </p>
                     )}
-                    {r.catatan && <p className="text-sm text-gray-600 bg-[#F6FBF7] rounded px-3 py-2">{r.catatan}</p>}
+                    {r.catatan && <p className="text-sm text-gray-600 bg-pkk-surface rounded px-3 py-2">{r.catatan}</p>}
                     {evidences.length > 0 && (
                       <div className="flex flex-wrap gap-2 pt-1">
                         {evidences.map(e => (
-                          <div key={e.id} className="flex items-center gap-1.5 text-xs bg-[#EAF5EC] text-[#2E8B57] px-2 py-1 rounded">
+                          <div key={e.id} className="flex items-center gap-1.5 text-xs bg-pkk-tint text-pkk-accent px-2 py-1 rounded">
                             <FileText className="w-3 h-3" />
                             {e.file_name}
                           </div>

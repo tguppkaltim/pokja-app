@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Pencil, Eye, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Pencil, Eye, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import type { Kegiatan, JadwalKegiatan } from '@/types'
 
 import { formatTanggalPendek } from '@/lib/utils'
 import { toast } from 'sonner'
+import { BadgePeringatan } from '@/components/badge-status'
 
 function formatRupiah(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
@@ -89,11 +90,11 @@ export default function KegiatanListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B6B35]">Rencana Kegiatan</h1>
+          <h1 className="text-2xl font-bold text-pkk">Rencana Kegiatan</h1>
           <p className="text-sm text-gray-500 mt-1">Plan of Action (POA) TP PKK Kalimantan Timur</p>
         </div>
         {canEdit && (
-          <Link to="/kegiatan/tambah" className={cn(buttonVariants(), 'bg-[#1B6B35] hover:bg-[#134D26] text-white')}>
+          <Link to="/kegiatan/tambah" className={cn(buttonVariants(), 'bg-pkk hover:bg-pkk-hover text-white')}>
             <Plus className="w-4 h-4 mr-1" /> Tambah Kegiatan
           </Link>
         )}
@@ -106,11 +107,11 @@ export default function KegiatanListPage() {
             placeholder="Cari nama kegiatan..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9 border-[#d1e8d5]"
+            className="pl-9 border-pkk-border"
           />
         </div>
         <Select value={filterTahun} onValueChange={v => v && setFilterTahun(v)}>
-          <SelectTrigger className="w-28 border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-28 border-pkk-border"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="2026">2026</SelectItem>
             <SelectItem value="2025">2025</SelectItem>
@@ -118,7 +119,7 @@ export default function KegiatanListPage() {
         </Select>
         {user?.role !== 'operator' && (
           <Select items={pokjaItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
-            <SelectTrigger className="w-40 border-[#d1e8d5]"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
+            <SelectTrigger className="w-40 border-pkk-border"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>
               {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
             </SelectContent>
@@ -126,16 +127,16 @@ export default function KegiatanListPage() {
         )}
       </div>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardHeader className="pb-3">
           <p className="text-sm text-gray-500 font-normal">
-            Menampilkan <span className="font-semibold text-[#1B6B35]">{data.length}</span> kegiatan
+            Menampilkan <span className="font-semibold text-pkk">{data.length}</span> kegiatan
           </p>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[#134D26] hover:bg-[#134D26] border-b-0">
+              <TableRow className="bg-pkk-hover hover:bg-pkk-hover border-b-0">
                 <TableHead className="text-white w-8">No</TableHead>
                 <TableHead className="text-white hidden md:table-cell">Pokja</TableHead>
                 <TableHead className="text-white hidden lg:table-cell">Program Pokok</TableHead>
@@ -148,22 +149,21 @@ export default function KegiatanListPage() {
             </TableHeader>
             <TableBody>
               {data.map((k, idx) => (
-                <TableRow key={k.id} className={idx % 2 === 0 ? 'hover:bg-[#EAF5EC]/40' : 'bg-[#EAF5EC]/30 hover:bg-[#EAF5EC]/60'}>
+                <TableRow key={k.id} className={idx % 2 === 0 ? 'hover:bg-pkk-tint/40' : 'bg-pkk-tint/30 hover:bg-pkk-tint/60'}>
                   <TableCell className="px-4 py-3 text-gray-400">{idx + 1}</TableCell>
                   <TableCell className="px-4 py-3 hidden md:table-cell">
-                    <Badge variant="outline" className="border-[#52B788] text-[#2E8B57] text-xs">{k.pokjaName}</Badge>
+                    <Badge variant="outline" className="border-pkk-soft text-pkk-accent text-xs">{k.pokjaName}</Badge>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-600 text-xs hidden lg:table-cell">{k.programName}</TableCell>
                   <TableCell className="px-4 py-3 font-medium text-gray-800 max-w-xs whitespace-normal">
                     <p className="line-clamp-2">{k.nama_kegiatan}</p>
                     {k.belumDipetakan && (
-                      <Badge
-                        variant="outline"
+                      <BadgePeringatan
                         title="Kegiatan ini dibuat sebelum master program diadopsi. Buka Edit untuk memilih Program Prioritasnya."
-                        className="mt-1 gap-1 border-amber-300 bg-amber-50 text-amber-700 text-[11px] font-normal"
+                        className="mt-1 text-[11px]"
                       >
-                        <AlertTriangle className="w-3 h-3" /> Belum dipetakan
-                      </Badge>
+                        Belum dipetakan
+                      </BadgePeringatan>
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-xs hidden xl:table-cell">{k.sasaran}</TableCell>
@@ -171,17 +171,17 @@ export default function KegiatanListPage() {
                   <TableCell className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell">{formatRupiah(k.anggaran)}</TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" aria-label="Lihat detail" onClick={() => navigate(`/kegiatan/${k.id}`)} className="text-[#2E8B57] hover:bg-[#EAF5EC] hover:text-[#1B6B35]">
+                      <Button variant="ghost" size="icon" aria-label="Lihat detail" onClick={() => navigate(`/kegiatan/${k.id}`)} className="text-pkk-accent hover:bg-pkk-tint hover:text-pkk">
                         <Eye className="w-4 h-4" />
                       </Button>
                       {canEdit && (
                         <>
-                          <Button variant="ghost" size="icon" aria-label="Ubah kegiatan" onClick={() => navigate(`/kegiatan/${k.id}/edit`)} className="text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                          <Button variant="ghost" size="icon" aria-label="Ubah kegiatan" onClick={() => navigate(`/kegiatan/${k.id}/edit`)} className="text-pkk transisi-warna hover:bg-pkk-tint hover:text-pkk-hover">
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger render={
-                              <Button variant="ghost" size="icon" aria-label="Hapus kegiatan" className="text-red-500 hover:bg-red-50 hover:text-red-600">
+                              <Button variant="ghost" size="icon" aria-label="Hapus kegiatan" className="text-red-500 transisi-warna hover:bg-red-50 hover:text-red-600">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             } />

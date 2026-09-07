@@ -30,6 +30,30 @@ const adminItems: NavItem[] = [
   { label: 'Master Program', path: '/admin/program', icon: Layers, roles: ['super_admin'] },
 ]
 
+/**
+ * Kelas satu item navigasi. Sebelumnya blok kelas yang sama ditulis ulang di
+ * tiga tempat, dan sempat berbeda satu sama lain.
+ *
+ * Penanda aktif memakai putih transparan, bukan biru muda: di atas sidebar
+ * #0047AB, #2349B5 hanya berkontras 1,08:1 — praktis tak terlihat. Putih 18%
+ * terbaca sebagai bidang dan teks putih di atasnya tetap lolos AA (5,52:1).
+ * Garis tebal di tepi kiri jadi penanda kedua supaya tidak bergantung warna
+ * saja.
+ */
+function kelasNav(isActive: boolean, collapsed: boolean) {
+  return cn(
+    'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transisi-warna',
+    // Garis tepi kiri selalu ada tapi tergulung habis saat tidak aktif,
+    // sehingga bisa tumbuh dengan halus alih-alih muncul mendadak.
+    'before:absolute before:left-0 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2',
+    'before:rounded-r-full before:bg-white before:transition-transform before:duration-200',
+    isActive
+      ? 'bg-white/18 text-white before:scale-y-100'
+      : 'text-white/70 before:scale-y-0 hover:bg-white/10 hover:text-white',
+    collapsed && 'justify-center px-2',
+  )
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
@@ -40,12 +64,12 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex flex-col h-screen bg-[#1B6B35] text-white transition-all duration-300 relative',
+        'flex flex-col h-screen bg-pkk text-white transition-all duration-300 relative',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo */}
-      <div className={cn('flex items-center gap-3 px-4 py-5 border-b border-[#134D26]', collapsed && 'justify-center px-2')}>
+      <div className={cn('flex items-center gap-3 px-4 py-5 border-b border-white/14', collapsed && 'justify-center px-2')}>
         <div className="flex-shrink-0 w-9 h-9 bg-white rounded-lg flex items-center justify-center overflow-hidden">
           <img src="/logo-pemprov.png" alt="Logo Pemprov Kaltim" className="w-full h-full object-contain p-0.5" />
         </div>
@@ -55,7 +79,7 @@ export function Sidebar() {
                 jadi "SIM PKK Kalimantan Ti...". Dibiarkan membungkus dua baris
                 supaya nama lembaganya terbaca utuh. */}
             <p className="text-sm font-bold leading-tight">SIM PKK Kalimantan Timur</p>
-            <p className="text-xs text-green-300 leading-tight mt-0.5 truncate">Sistem Informasi Manajemen</p>
+            <p className="text-xs text-white/65 leading-tight mt-0.5 truncate">Sistem Informasi Manajemen</p>
           </div>
         )}
       </div>
@@ -67,15 +91,7 @@ export function Sidebar() {
             <li key={item.path}>
               <NavLink
                 to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-white text-[#1B6B35]'
-                      : 'text-green-100 hover:bg-[#134D26] hover:text-white',
-                    collapsed && 'justify-center px-2'
-                  )
-                }
+                className={({ isActive }) => kelasNav(isActive, collapsed)}
                 title={collapsed ? item.label : undefined}
               >
                 <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -88,23 +104,15 @@ export function Sidebar() {
         {visibleAdmin.length > 0 && (
           <>
             {!collapsed && (
-              <p className="text-xs text-green-400 uppercase tracking-wider px-5 mt-6 mb-2">Administrasi</p>
+              <p className="text-xs text-white/55 uppercase tracking-wider px-5 mt-6 mb-2">Administrasi</p>
             )}
-            {collapsed && <div className="border-t border-[#134D26] my-3 mx-2" />}
+            {collapsed && <div className="border-t border-white/14 my-3 mx-2" />}
             <ul className="space-y-1 px-2">
               {visibleAdmin.map(item => (
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-white text-[#1B6B35]'
-                          : 'text-green-100 hover:bg-[#134D26] hover:text-white',
-                        collapsed && 'justify-center px-2'
-                      )
-                    }
+                    className={({ isActive }) => kelasNav(isActive, collapsed)}
                     title={collapsed ? item.label : undefined}
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -118,16 +126,10 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom: Profil & Logout */}
-      <div className="border-t border-[#134D26] p-2 space-y-1">
+      <div className="border-t border-white/14 p-2 space-y-1">
         <NavLink
           to="/profil"
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-              isActive ? 'bg-white text-[#1B6B35]' : 'text-green-100 hover:bg-[#134D26] hover:text-white',
-              collapsed && 'justify-center px-2'
-            )
-          }
+          className={({ isActive }) => kelasNav(isActive, collapsed)}
           title={collapsed ? 'Profil' : undefined}
         >
           <User className="w-5 h-5 flex-shrink-0" />
@@ -138,7 +140,7 @@ export function Sidebar() {
           onClick={logout}
           title={collapsed ? 'Keluar' : undefined}
           className={cn(
-            'h-auto w-full justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-green-100 hover:bg-red-700 hover:text-white',
+            'h-auto w-full justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transisi-warna hover:bg-red-600 hover:text-white',
             collapsed && 'justify-center px-2'
           )}
         >
@@ -153,7 +155,7 @@ export function Sidebar() {
         size="icon-xs"
         aria-label={collapsed ? 'Lebarkan menu' : 'Ciutkan menu'}
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 z-10 rounded-full border-[#d1e8d5] bg-white text-[#1B6B35] shadow-sm hover:bg-[#EAF5EC] hover:text-[#134D26]"
+        className="absolute -right-3 top-20 z-10 rounded-full border-pkk-border bg-white text-pkk shadow-sm transisi-warna hover:bg-pkk-tint hover:text-pkk-hover"
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </Button>

@@ -24,9 +24,9 @@ function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F6FBF7] flex items-center justify-center">
+      <div className="min-h-screen bg-pkk-surface flex items-center justify-center">
         <div className="text-center space-y-2">
-          <div className="w-10 h-10 bg-[#1B6B35] rounded-xl flex items-center justify-center mx-auto animate-pulse">
+          <div className="w-10 h-10 bg-pkk rounded-xl flex items-center justify-center mx-auto animate-pulse">
             <span className="text-white text-sm font-bold">PKK</span>
           </div>
           <p className="text-sm text-gray-400">Memuat...</p>

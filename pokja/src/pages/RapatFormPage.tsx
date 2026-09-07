@@ -80,21 +80,21 @@ export default function RapatFormPage() {
       </Button>
 
       <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">{isEdit ? 'Edit Notulensi' : 'Notulensi Rapat Baru'}</h1>
+        <h1 className="text-2xl font-bold text-pkk">{isEdit ? 'Edit Notulensi' : 'Notulensi Rapat Baru'}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Catat pokok rapat. Tindak lanjutnya ditambahkan setelah notulensi tersimpan.
         </p>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <Card className="border-[#d1e8d5]">
+        <Card className="border-pkk-border">
           <CardHeader>
-            <CardTitle className="text-base text-[#1B6B35]">Informasi Rapat</CardTitle>
+            <CardTitle className="text-base text-pkk">Informasi Rapat</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>Tanggal Rapat <span className="text-red-500">*</span></Label>
-              <DatePicker value={tanggal} onChange={setTanggal} placeholder="Pilih tanggal rapat..." className="border-[#d1e8d5]" />
+              <DatePicker value={tanggal} onChange={setTanggal} placeholder="Pilih tanggal rapat..." className="border-pkk-border" />
             </div>
 
             <div className="space-y-1.5">
@@ -103,7 +103,7 @@ export default function RapatFormPage() {
                 placeholder="mis: Rapat Koordinasi Pokja Triwulan III"
                 value={judul}
                 onChange={e => setJudul(e.target.value)}
-                className="border-[#d1e8d5]"
+                className="border-pkk-border"
               />
             </div>
 
@@ -113,7 +113,7 @@ export default function RapatFormPage() {
                 placeholder="Nama atau unit yang hadir, dipisahkan koma..."
                 value={peserta}
                 onChange={e => setPeserta(e.target.value)}
-                className="border-[#d1e8d5] min-h-20"
+                className="border-pkk-border min-h-20"
               />
             </div>
 
@@ -123,7 +123,7 @@ export default function RapatFormPage() {
                 placeholder="Pokok bahasan, keputusan, dan catatan penting rapat..."
                 value={ringkasan}
                 onChange={e => setRingkasan(e.target.value)}
-                className="border-[#d1e8d5] min-h-40"
+                className="border-pkk-border min-h-40"
               />
             </div>
           </CardContent>
@@ -131,7 +131,7 @@ export default function RapatFormPage() {
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>Batal</Button>
-          <Button type="submit" disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+          <Button type="submit" disabled={isSaving} className="bg-pkk hover:bg-pkk-hover">
             <Save className="w-4 h-4 mr-1" />
             {isSaving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Notulensi'}
           </Button>

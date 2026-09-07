@@ -168,7 +168,7 @@ export default function RapatDetailPage() {
         </Button>
         {bolehKelola && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate(`/notulensi/${rapat.id}/edit`)} className="border-[#52B788] text-[#1B6B35] hover:bg-[#EAF5EC]">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/notulensi/${rapat.id}/edit`)} className="border-pkk-soft text-pkk hover:bg-pkk-tint">
               <Pencil className="w-4 h-4 mr-1" /> Edit
             </Button>
             <AlertDialog>
@@ -195,7 +195,7 @@ export default function RapatDetailPage() {
         )}
       </div>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardContent className="pt-6 space-y-4">
           <div>
             <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
@@ -207,7 +207,7 @@ export default function RapatDetailPage() {
 
           {rapat.peserta && (
             <div className="flex items-start gap-2 text-sm">
-              <Users className="w-4 h-4 text-[#2E8B57] mt-0.5 shrink-0" />
+              <Users className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div>
                 <p className="text-gray-400 text-xs">Peserta</p>
                 <p className="text-gray-700 whitespace-pre-wrap">{rapat.peserta}</p>
@@ -217,7 +217,7 @@ export default function RapatDetailPage() {
 
           {rapat.ringkasan && (
             <>
-              <Separator className="bg-[#EAF5EC]" />
+              <Separator className="bg-pkk-tint" />
               <div>
                 <p className="text-gray-400 text-xs mb-1">Ringkasan</p>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{rapat.ringkasan}</p>
@@ -227,12 +227,12 @@ export default function RapatDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-[#d1e8d5]">
+      <Card className="border-pkk-border">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base text-[#1B6B35]">Tindak Lanjut ({daftar.length})</CardTitle>
+            <CardTitle className="text-base text-pkk">Tindak Lanjut ({daftar.length})</CardTitle>
             {bolehKelola && (
-              <Button size="sm" onClick={bukaTambah} className="bg-[#1B6B35] hover:bg-[#134D26]">
+              <Button size="sm" onClick={bukaTambah} className="bg-pkk hover:bg-pkk-hover">
                 <Plus className="w-4 h-4 mr-1" /> Tambah
               </Button>
             )}
@@ -247,13 +247,13 @@ export default function RapatDetailPage() {
             const lewat = terlambat(t)
             const dapatDiubah = bolehUbah(t, user)
             return (
-              <div key={t.id} className="border border-[#d1e8d5] rounded-lg p-4 space-y-2">
+              <div key={t.id} className="border border-pkk-border rounded-lg p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm text-gray-800 flex-1">{t.uraian}</p>
                   <div className="flex items-center gap-1 shrink-0">
                     <Badge className={`text-xs ${STATUS_BADGE[t.status]}`}>{STATUS_LABEL[t.status]}</Badge>
                     {dapatDiubah && (
-                      <Button variant="ghost" size="xs" onClick={() => bukaEdit(t)} className="text-[#1B6B35] hover:bg-[#EAF5EC]">
+                      <Button variant="ghost" size="xs" onClick={() => bukaEdit(t)} className="text-pkk hover:bg-pkk-tint">
                         <Pencil className="w-3 h-3" />
                       </Button>
                     )}
@@ -280,22 +280,22 @@ export default function RapatDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge variant="outline" className="border-[#52B788] text-[#2E8B57]">{labelPic(t, pokjaList)}</Badge>
+                  <Badge variant="outline" className="border-pkk-soft text-pkk-accent">{labelPic(t, pokjaList)}</Badge>
                   <span className="text-gray-400">Open {formatTanggalPanjang(t.open_date)}</span>
                   {t.target_closed && (
                     <span className={lewat ? 'text-red-600 font-medium' : 'text-gray-400'}>
                       Target {formatTanggalPanjang(t.target_closed)}
                     </span>
                   )}
-                  {t.closed_date && <span className="text-green-600">Selesai {formatTanggalPanjang(t.closed_date)}</span>}
+                  {t.closed_date && <span className="text-status-success">Selesai {formatTanggalPanjang(t.closed_date)}</span>}
                   {lewat && (
-                    <Badge className="bg-red-100 text-red-700 border-red-200">
+                    <Badge className="bg-status-danger-tint text-status-danger border-status-danger/25">
                       <AlertTriangle className="w-3 h-3 mr-1" /> Terlambat
                     </Badge>
                   )}
                 </div>
 
-                {t.keterangan && <p className="text-xs text-gray-600 bg-[#F6FBF7] rounded px-3 py-2">{t.keterangan}</p>}
+                {t.keterangan && <p className="text-xs text-gray-600 bg-pkk-surface rounded px-3 py-2">{t.keterangan}</p>}
 
                 <RiwayatProgres
                   entri={progres.filter(p => p.tindak_lanjut_id === t.id)}
@@ -311,7 +311,7 @@ export default function RapatDetailPage() {
       <Dialog open={dialogTerbuka} onOpenChange={setDialogTerbuka}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-[#1B6B35]">
+            <DialogTitle className="text-pkk">
               {editing ? 'Ubah Tindak Lanjut' : 'Tambah Tindak Lanjut'}
             </DialogTitle>
           </DialogHeader>
@@ -323,7 +323,7 @@ export default function RapatDetailPage() {
                 placeholder="Apa yang harus ditindaklanjuti..."
                 value={form.uraian}
                 onChange={e => setForm(p => ({ ...p, uraian: e.target.value }))}
-                className="border-[#d1e8d5] min-h-20"
+                className="border-pkk-border min-h-20"
                 disabled={!bolehKelola && editing !== null}
               />
               {!bolehKelola && editing && (
@@ -340,7 +340,7 @@ export default function RapatDetailPage() {
                   onValueChange={v => v && setForm(p => ({ ...p, picValue: v }))}
                   disabled={!bolehKelola && editing !== null}
                 >
-                  <SelectTrigger className="border-[#d1e8d5]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="border-pkk-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {picItems(pokjaList).map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                   </SelectContent>
@@ -353,7 +353,7 @@ export default function RapatDetailPage() {
                   value={form.target}
                   onChange={d => setForm(p => ({ ...p, target: d }))}
                   placeholder="Opsional..."
-                  className="border-[#d1e8d5]"
+                  className="border-pkk-border"
                 />
               </div>
             </div>
@@ -364,7 +364,7 @@ export default function RapatDetailPage() {
                 placeholder="Catatan tambahan..."
                 value={form.keterangan}
                 onChange={e => setForm(p => ({ ...p, keterangan: e.target.value }))}
-                className="border-[#d1e8d5] min-h-16"
+                className="border-pkk-border min-h-16"
               />
               <p className="text-xs text-gray-400">
                 Status dan foto bukti diisi lewat Tambah Progress, supaya perubahannya tercatat di riwayat.
@@ -375,7 +375,7 @@ export default function RapatDetailPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogTerbuka(false)}>Batal</Button>
-            <Button onClick={simpan} disabled={isSaving} className="bg-[#1B6B35] hover:bg-[#134D26]">
+            <Button onClick={simpan} disabled={isSaving} className="bg-pkk hover:bg-pkk-hover">
               {isSaving ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </DialogFooter>
@@ -405,11 +405,11 @@ function RiwayatProgres({
   onTambah: () => void
 }) {
   return (
-    <div className="border-t border-[#EAF5EC] pt-3 mt-1">
+    <div className="border-t border-pkk-tint pt-3 mt-1">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-medium text-gray-500">Riwayat Progress ({entri.length})</p>
         {bolehTambah && (
-          <Button variant="ghost" size="xs" onClick={onTambah} className="text-[#1B6B35] hover:bg-[#EAF5EC]">
+          <Button variant="ghost" size="xs" onClick={onTambah} className="text-pkk hover:bg-pkk-tint">
             <Plus className="w-3 h-3 mr-1" /> Tambah Progress
           </Button>
         )}
@@ -420,7 +420,7 @@ function RiwayatProgres({
       <ol className="space-y-2">
         {entri.map(e => (
           <li key={e.id} className="relative pl-4 text-xs">
-            <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-[#52B788]" />
+            <span className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-pkk-soft" />
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-gray-400">
                 {new Date(e.created_at).toLocaleString('id-ID', {
@@ -465,7 +465,7 @@ function TautanFoto({ path }: { path: string }) {
       type="button"
       onClick={buka}
       disabled={membuka}
-      className="inline-flex items-center gap-1 text-[#2E8B57] hover:underline mt-0.5 disabled:opacity-50"
+      className="inline-flex items-center gap-1 text-pkk-accent hover:underline mt-0.5 disabled:opacity-50"
     >
       <ImageIcon className="w-3 h-3" /> {membuka ? 'Membuka...' : 'Lihat foto'}
     </button>

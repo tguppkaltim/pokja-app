@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/auth-context'
@@ -16,6 +15,7 @@ import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
 import { BULAN_FULL } from '@/lib/kalender'
 import { cn, toTanggalLokal, dariTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { toast } from 'sonner'
+import { BadgeStatus } from '@/components/badge-status'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -30,12 +30,6 @@ const TIPE_DIIZINKAN = ['.jpg', '.jpeg', '.png', '.webp', '.pdf']
 
 function formatRupiah(n: number) {
   return `Rp ${n.toLocaleString('id-ID')}`
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'terlaksana') return <Badge className="bg-green-100 text-green-700 border-green-200">✓ Terlaksana</Badge>
-  if (status === 'tidak_terlaksana') return <Badge className="bg-red-100 text-red-700 border-red-200">✗ Tidak Terlaksana</Badge>
-  return null
 }
 
 export default function RealisasiPage() {
@@ -270,22 +264,22 @@ export default function RealisasiPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B6B35]">Input Realisasi Kegiatan</h1>
+        <h1 className="text-2xl font-bold text-pkk">Input Realisasi Kegiatan</h1>
         <p className="text-sm text-gray-500 mt-1">Laporkan pelaksanaan kegiatan beserta bukti pendukung.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit}>
-            <Card className="border-[#d1e8d5]">
+            <Card className="border-pkk-border">
               <CardHeader>
-                <CardTitle className="text-base text-[#1B6B35]">Data Realisasi</CardTitle>
+                <CardTitle className="text-base text-pkk">Data Realisasi</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <Label>Kegiatan <span className="text-red-500">*</span></Label>
                   <Select items={kegiatanItems} value={selectedKegiatan} onValueChange={v => { if (v) { setSelectedKegiatan(v); setSelectedJadwal(''); setEditingId(null); setTanggal(undefined) } }}>
-                    <SelectTrigger className="border-[#d1e8d5] w-full"><SelectValue placeholder="Pilih kegiatan..." /></SelectTrigger>
+                    <SelectTrigger className="border-pkk-border w-full"><SelectValue placeholder="Pilih kegiatan..." /></SelectTrigger>
                     <SelectContent alignItemWithTrigger={false} className="w-[min(600px,90vw)]">
                       {kegiatanList.map(k => (
                         <SelectItem key={k.id} value={String(k.id)} className="py-2.5">
@@ -300,7 +294,7 @@ export default function RealisasiPage() {
                 </div>
 
                 {selectedKegiatanData && (
-                  <div className="bg-[#F6FBF7] rounded-lg p-3 text-xs text-gray-500 space-y-1 border border-[#EAF5EC]">
+                  <div className="bg-pkk-surface rounded-lg p-3 text-xs text-gray-500 space-y-1 border border-pkk-tint">
                     <p><span className="font-medium text-gray-600">Program:</span> {getProgramName(selectedKegiatanData.program_pokok_id)}</p>
                     <p><span className="font-medium text-gray-600">Sasaran:</span> {selectedKegiatanData.sasaran || '-'}</p>
                     <p><span className="font-medium text-gray-600">Sesi terjadwal:</span> {jadwalList.length > 0 ? `${jadwalList.length} sesi, ${sesiTersedia} belum diisi` : 'Belum ditentukan'}</p>
@@ -308,9 +302,9 @@ export default function RealisasiPage() {
                 )}
 
                 {editingId !== null && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-pkk-border bg-pkk-tint p-3 text-sm text-pkk">
                     <span>Sedang memperbaiki realisasi yang sudah tersimpan.</span>
-                    <Button type="button" variant="ghost" size="sm" onClick={batalUbah} className="text-blue-700 hover:bg-blue-100">
+                    <Button type="button" variant="ghost" size="sm" onClick={batalUbah} className="text-pkk transisi-warna hover:bg-white/70">
                       Batal
                     </Button>
                   </div>
@@ -319,7 +313,7 @@ export default function RealisasiPage() {
                 <div className="space-y-1.5">
                   <Label>Sesi Terjadwal <span className="text-red-500">*</span></Label>
                   <Select items={jadwalItems} value={selectedJadwal} onValueChange={v => v && pilihSesi(v)} disabled={!selectedKegiatan}>
-                    <SelectTrigger className="border-[#d1e8d5] w-full"><SelectValue placeholder="Pilih sesi terjadwal..." /></SelectTrigger>
+                    <SelectTrigger className="border-pkk-border w-full"><SelectValue placeholder="Pilih sesi terjadwal..." /></SelectTrigger>
                     <SelectContent>
                       {jadwalItems.map(i => (
                         <SelectItem key={i.value} value={i.value} disabled={i.terkunci}>
@@ -342,7 +336,7 @@ export default function RealisasiPage() {
 
                 <div className="space-y-1.5">
                   <Label>Tanggal Realisasi <span className="text-red-500">*</span></Label>
-                  <DatePicker value={tanggal} onChange={setTanggal} placeholder="Pilih tanggal pelaksanaan..." disabled={!selectedJadwal} className="border-[#d1e8d5]" />
+                  <DatePicker value={tanggal} onChange={setTanggal} placeholder="Pilih tanggal pelaksanaan..." disabled={!selectedJadwal} className="border-pkk-border" />
                   <p className="text-xs text-gray-400">Tanggal pelaksanaan nyata. Boleh berbeda dari tanggal rencana.</p>
                 </div>
 
@@ -350,8 +344,8 @@ export default function RealisasiPage() {
                   <Label>Status Realisasi <span className="text-red-500">*</span></Label>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { value: 'terlaksana', label: '✓ Terlaksana', base: 'border-green-300 text-green-700', active: 'bg-green-600 text-white border-green-600' },
-                      { value: 'tidak_terlaksana', label: '✗ Tidak Terlaksana', base: 'border-red-300 text-red-700', active: 'bg-red-600 text-white border-red-600' },
+                      { value: 'terlaksana', label: '✓ Terlaksana', base: 'border-status-success/40 text-status-success', active: 'border-status-success bg-status-success text-white' },
+                      { value: 'tidak_terlaksana', label: '✗ Tidak Terlaksana', base: 'border-status-danger/40 text-status-danger', active: 'border-status-danger bg-status-danger text-white' },
                     ].map(opt => (
                       <Button
                         key={opt.value}
@@ -378,7 +372,7 @@ export default function RealisasiPage() {
                       placeholder="0"
                       value={anggaranAktual}
                       onChange={e => setAnggaranAktual(e.target.value)}
-                      className="border-[#d1e8d5]"
+                      className="border-pkk-border"
                     />
                     <p className="text-xs text-gray-400">
                       {rencanaPerSesi !== null
@@ -390,10 +384,10 @@ export default function RealisasiPage() {
 
                 <div className="space-y-1.5">
                   <Label>Catatan Pelaksanaan</Label>
-                  <Textarea placeholder="Deskripsikan hasil pelaksanaan, kendala, atau hal penting lainnya..." value={catatan} onChange={e => setCatatan(e.target.value)} className="border-[#d1e8d5] min-h-24" />
+                  <Textarea placeholder="Deskripsikan hasil pelaksanaan, kendala, atau hal penting lainnya..." value={catatan} onChange={e => setCatatan(e.target.value)} className="border-pkk-border min-h-24" />
                 </div>
 
-                <Separator className="bg-[#EAF5EC]" />
+                <Separator className="bg-pkk-tint" />
 
                 <div className="space-y-2">
                   <Label>Upload Bukti Kegiatan</Label>
@@ -407,12 +401,12 @@ export default function RealisasiPage() {
                     className={cn(
                       'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
                       sedangSeret
-                        ? 'border-[#1B6B35] bg-[#EAF5EC]'
-                        : 'border-[#52B788] hover:bg-[#EAF5EC]/50'
+                        ? 'border-pkk bg-pkk-tint'
+                        : 'border-pkk-soft hover:bg-pkk-tint/50'
                     )}
                   >
-                    <Upload className="w-6 h-6 text-[#52B788] mb-1" />
-                    <span className="text-sm text-[#2E8B57] font-medium">
+                    <Upload className="w-6 h-6 text-pkk-soft mb-1" />
+                    <span className="text-sm text-pkk-accent font-medium">
                       {sedangSeret ? 'Lepaskan file di sini' : 'Klik atau seret file ke sini'}
                     </span>
                     <span className="text-xs text-gray-400 mt-0.5">
@@ -430,8 +424,8 @@ export default function RealisasiPage() {
                   {files.length > 0 && (
                     <div className="space-y-2">
                       {files.map((f, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-[#F6FBF7] border border-[#d1e8d5] rounded-lg px-3 py-2">
-                          {f.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-[#2E8B57] shrink-0" /> : <FileText className="w-4 h-4 text-blue-500 shrink-0" />}
+                        <div key={i} className="flex items-center gap-3 bg-pkk-surface border border-pkk-border rounded-lg px-3 py-2">
+                          {f.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-pkk-accent shrink-0" /> : <FileText className="w-4 h-4 text-gray-400 shrink-0" />}
                           <span className="text-sm text-gray-700 flex-1 truncate">{f.name}</span>
                           <span className="text-xs text-gray-400">{(f.size / 1024).toFixed(0)} KB</span>
                           <Button type="button" variant="ghost" size="icon-xs" aria-label={`Hapus file ${f.name}`} onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:bg-red-50 hover:text-red-500">
@@ -444,7 +438,7 @@ export default function RealisasiPage() {
                 </div>
 
                 <div className="flex justify-end pt-2">
-                  <Button type="submit" className="bg-[#1B6B35] hover:bg-[#134D26]" disabled={isLoading}>
+                  <Button type="submit" className="bg-pkk hover:bg-pkk-hover" disabled={isLoading}>
                     {isLoading ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-1" /> Simpan Realisasi</>}
                   </Button>
                 </div>
@@ -454,9 +448,9 @@ export default function RealisasiPage() {
         </div>
 
         <div>
-          <Card className="border-[#d1e8d5]">
+          <Card className="border-pkk-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-[#1B6B35]">Riwayat Realisasi</CardTitle>
+              <CardTitle className="text-base text-pkk">Riwayat Realisasi</CardTitle>
               <CardDescription className="text-xs line-clamp-2">
                 {selectedKegiatanData ? selectedKegiatanData.nama_kegiatan : 'Pilih kegiatan untuk melihat riwayat'}
               </CardDescription>
@@ -473,14 +467,14 @@ export default function RealisasiPage() {
                         : `${BULAN_FULL[r.bulan - 1]} ${r.tahun}`}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
-                      <StatusBadge status={r.status} />
+                      <BadgeStatus status={r.status} />
                       <Button
                         type="button"
                         variant="ghost"
                         size="xs"
                         onClick={() => mulaiUbah(r)}
                         disabled={editingId === r.id}
-                        className="text-[#1B6B35] hover:bg-[#EAF5EC]"
+                        className="text-pkk hover:bg-pkk-tint"
                       >
                         <Pencil className="w-3 h-3 mr-1" /> Ubah
                       </Button>
@@ -493,11 +487,11 @@ export default function RealisasiPage() {
                   )}
                   {r.status === 'terlaksana' && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Anggaran aktual: <span className="font-medium text-[#1B6B35]">{formatRupiah(r.anggaran_aktual)}</span>
+                      Anggaran aktual: <span className="font-medium text-pkk">{formatRupiah(r.anggaran_aktual)}</span>
                     </p>
                   )}
                   {r.catatan && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{r.catatan}</p>}
-                  <Separator className="mt-3 bg-[#EAF5EC]" />
+                  <Separator className="mt-3 bg-pkk-tint" />
                 </div>
               ))}
             </CardContent>
