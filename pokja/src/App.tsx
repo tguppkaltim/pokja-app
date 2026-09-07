@@ -17,6 +17,7 @@ import RapatDetailPage from '@/pages/RapatDetailPage'
 import PenggunaPage from '@/pages/admin/PenggunaPage'
 import MasterPokjaPage from '@/pages/admin/MasterPokjaPage'
 import MasterProgramPage from '@/pages/admin/MasterProgramPage'
+import MasterMitraPage from '@/pages/admin/MasterMitraPage'
 import ProfilPage from '@/pages/ProfilPage'
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -102,6 +103,11 @@ function AppRoutes() {
         <Route path="/admin/program" element={
           <ProtectedRoute roles={['super_admin']}>
             <MasterProgramPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/mitra" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <MasterMitraPage />
           </ProtectedRoute>
         } />
       </Route>

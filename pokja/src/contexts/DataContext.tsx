@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react'
-import type { Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas } from '@/types'
-import { fetchPokja, fetchProgramPokok, fetchProgramUnggulan, fetchProgramPrioritas } from '@/lib/db'
+import type { Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, Mitra } from '@/types'
+import { fetchPokja, fetchProgramPokok, fetchProgramUnggulan, fetchProgramPrioritas, fetchMitra } from '@/lib/db'
 import { useAuth } from '@/contexts/auth-context'
 import { DataContext } from '@/contexts/data-context'
 
@@ -13,6 +13,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     programPokok: ProgramPokok[]
     programUnggulan: ProgramUnggulan[]
     programPrioritas: ProgramPrioritas[]
+    mitra: Mitra[]
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
@@ -28,10 +29,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchProgramPokok(),
       fetchProgramUnggulan(),
       fetchProgramPrioritas(),
+      fetchMitra(),
     ])
-      .then(([p, pp, pu, ppr]) => {
+      .then(([p, pp, pu, ppr, m]) => {
         if (dibatalkan) return
-        setData({ pokja: p, programPokok: pp, programUnggulan: pu, programPrioritas: ppr })
+        setData({ pokja: p, programPokok: pp, programUnggulan: pu, programPrioritas: ppr, mitra: m })
         setError(null)
       })
       .catch((err: unknown) => {
@@ -39,7 +41,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // aplikasi menggantung di "Memuat…" atau, lebih buruk, tiap halaman
         // tampil kosong seolah-olah datanya memang tidak ada.
         if (dibatalkan) return
-        setData({ pokja: [], programPokok: [], programUnggulan: [], programPrioritas: [] })
+        setData({ pokja: [], programPokok: [], programUnggulan: [], programPrioritas: [], mitra: [] })
         setError(err instanceof Error ? err.message : 'Gagal memuat master data.')
       })
     return () => { dibatalkan = true }
@@ -57,6 +59,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         programPokok: data?.programPokok ?? [],
         programUnggulan: data?.programUnggulan ?? [],
         programPrioritas: data?.programPrioritas ?? [],
+        mitra: data?.mitra ?? [],
         isLoading,
         error,
         reload,

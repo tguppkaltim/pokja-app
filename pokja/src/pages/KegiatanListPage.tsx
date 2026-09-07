@@ -15,10 +15,11 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatan, deleteKegiatan, fetchJadwal } from '@/lib/db'
-import type { Kegiatan, JadwalKegiatan } from '@/types'
+import { fetchKegiatan, deleteKegiatan, fetchJadwal, fetchKegiatanMitra } from '@/lib/db'
+import type { Kegiatan, JadwalKegiatan, KegiatanMitra } from '@/types'
 
 import { formatTanggalPendek } from '@/lib/utils'
+import { jalurPrioritas } from '@/lib/master-program'
 import { toast } from 'sonner'
 import { BadgePeringatan } from '@/components/badge-status'
 
@@ -28,7 +29,7 @@ function formatRupiah(n: number) {
 
 export default function KegiatanListPage() {
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra } = useData()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filterPokja, setFilterPokja] = useState<string>(
@@ -37,12 +38,13 @@ export default function KegiatanListPage() {
   const [filterTahun, setFilterTahun] = useState(String(new Date().getFullYear()))
   const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
   const [allJadwal, setAllJadwal] = useState<JadwalKegiatan[]>([])
+  const [kaitanMitra, setKaitanMitra] = useState<KegiatanMitra[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
-    Promise.all([fetchKegiatan(opts), fetchJadwal({})])
-      .then(([k, j]) => { setAllKegiatan(k); setAllJadwal(j) })
+    Promise.all([fetchKegiatan(opts), fetchJadwal({}), fetchKegiatanMitra()])
+      .then(([k, j, m]) => { setAllKegiatan(k); setAllJadwal(j); setKaitanMitra(m) })
       .finally(() => setIsLoading(false))
   }, [user])
 
@@ -58,14 +60,32 @@ export default function KegiatanListPage() {
         if (search && !k.nama_kegiatan.toLowerCase().includes(search.toLowerCase())) return false
         return true
       })
-      .map(k => ({
-        ...k,
-        pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
-        programName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
-        belumDipetakan: k.program_prioritas_id === null,
-        jadwal: allJadwal.filter(j => j.kegiatan_id === k.id).map(j => formatTanggalPendek(j.tanggal)).join(', '),
-      }))
-  }, [allKegiatan, allJadwal, filterPokja, filterTahun, search, pokjaList, programPokok])
+      .map(k => {
+        // Unggulan dan Prioritas tidak disimpan di kegiatan — keduanya
+        // ditelusuri naik dari program_prioritas_id lewat master program.
+        const jalur = jalurPrioritas(k.program_prioritas_id, {
+          pokja: pokjaList, programPokok, programUnggulan, programPrioritas,
+        })
+        const namaMitra = kaitanMitra
+          .filter(km => km.kegiatan_id === k.id)
+          .map(km => {
+            const m = daftarMitra.find(x => x.id === km.mitra_id)
+            return m ? (m.singkatan || m.nama) : null
+          })
+          .filter((n): n is string => n !== null)
+        return {
+          ...k,
+          pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
+          programName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
+          unggulanName: jalur?.unggulan.name ?? null,
+          prioritasName: jalur?.prioritas.name ?? null,
+          belumDipetakan: k.program_prioritas_id === null,
+          mitraNames: namaMitra,
+          jadwal: allJadwal.filter(j => j.kegiatan_id === k.id).map(j => formatTanggalPendek(j.tanggal)).join(', '),
+        }
+      })
+  }, [allKegiatan, allJadwal, kaitanMitra, daftarMitra, filterPokja, filterTahun, search,
+      pokjaList, programPokok, programUnggulan, programPrioritas])
 
   // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
   const pokjaItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]
@@ -140,8 +160,11 @@ export default function KegiatanListPage() {
                 <TableHead className="text-white w-8">No</TableHead>
                 <TableHead className="text-white hidden md:table-cell">Pokja</TableHead>
                 <TableHead className="text-white hidden lg:table-cell">Program Pokok</TableHead>
+                <TableHead className="text-white hidden 2xl:table-cell">Program Unggulan</TableHead>
+                <TableHead className="text-white hidden 2xl:table-cell">Program Prioritas</TableHead>
                 <TableHead className="text-white">Nama Kegiatan</TableHead>
-                <TableHead className="text-white hidden xl:table-cell">Sasaran</TableHead>
+                <TableHead className="text-white hidden xl:table-cell">Mitra / OPD</TableHead>
+                <TableHead className="text-white hidden 2xl:table-cell">Sasaran</TableHead>
                 <TableHead className="text-white hidden lg:table-cell">Jadwal</TableHead>
                 <TableHead className="text-white text-right hidden xl:table-cell">Anggaran</TableHead>
                 <TableHead className="text-white text-center">Aksi</TableHead>
@@ -155,6 +178,18 @@ export default function KegiatanListPage() {
                     <Badge variant="outline" className="border-pkk-soft text-pkk-accent text-xs">{k.pokjaName}</Badge>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-600 text-xs hidden lg:table-cell">{k.programName}</TableCell>
+                  {/* Nama Unggulan dan Prioritas berupa kalimat panjang, jadi
+                      dipangkas dua baris dengan teks penuhnya di tooltip. */}
+                  <TableCell className="px-4 py-3 text-gray-600 text-xs hidden 2xl:table-cell max-w-40 whitespace-normal">
+                    {k.unggulanName
+                      ? <p className="line-clamp-2" title={k.unggulanName}>{k.unggulanName}</p>
+                      : <span className="text-gray-300">—</span>}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-600 text-xs hidden 2xl:table-cell max-w-48 whitespace-normal">
+                    {k.prioritasName
+                      ? <p className="line-clamp-2" title={k.prioritasName}>{k.prioritasName}</p>
+                      : <span className="text-gray-300">—</span>}
+                  </TableCell>
                   <TableCell className="px-4 py-3 font-medium text-gray-800 max-w-xs whitespace-normal">
                     <p className="line-clamp-2">{k.nama_kegiatan}</p>
                     {k.belumDipetakan && (
@@ -166,7 +201,18 @@ export default function KegiatanListPage() {
                       </BadgePeringatan>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-xs hidden xl:table-cell">{k.sasaran}</TableCell>
+                  <TableCell className="px-4 py-3 hidden xl:table-cell max-w-40">
+                    {k.mitraNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {k.mitraNames.map(n => (
+                          <Badge key={n} variant="outline" className="border-pkk-border text-pkk text-[11px] font-normal">
+                            {n}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : <span className="text-gray-300 text-xs">—</span>}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 text-xs hidden 2xl:table-cell">{k.sasaran}</TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell max-w-32"><p className="truncate">{k.jadwal || '-'}</p></TableCell>
                   <TableCell className="px-4 py-3 text-right text-gray-600 text-xs hidden xl:table-cell">{formatRupiah(k.anggaran)}</TableCell>
                   <TableCell className="px-4 py-3">

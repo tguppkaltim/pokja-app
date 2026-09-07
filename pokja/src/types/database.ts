@@ -144,6 +144,45 @@ export interface Database {
         }
         Relationships: []
       }
+      mitra: {
+        Row: {
+          id: number
+          nama: string
+          singkatan: string
+          aktif: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          nama: string
+          singkatan?: string
+          aktif?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          nama?: string
+          singkatan?: string
+          aktif?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      kegiatan_mitra: {
+        Row: {
+          kegiatan_id: number
+          mitra_id: number
+        }
+        Insert: {
+          kegiatan_id: number
+          mitra_id: number
+        }
+        Update: {
+          kegiatan_id?: number
+          mitra_id?: number
+        }
+        Relationships: []
+      }
       kegiatan: {
         Row: {
           id: number
@@ -151,6 +190,7 @@ export interface Database {
           program_pokok_id: number
           program_prioritas_id: number | null
           nama_kegiatan: string
+          deskripsi: string
           sasaran: string
           pelaksana: string
           anggaran: number
@@ -164,6 +204,7 @@ export interface Database {
           program_pokok_id: number
           program_prioritas_id?: number | null
           nama_kegiatan: string
+          deskripsi?: string
           sasaran: string
           pelaksana: string
           anggaran: number
@@ -177,6 +218,7 @@ export interface Database {
           program_pokok_id?: number
           program_prioritas_id?: number | null
           nama_kegiatan?: string
+          deskripsi?: string
           sasaran?: string
           pelaksana?: string
           anggaran?: number

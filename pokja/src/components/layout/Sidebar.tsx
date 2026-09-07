@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, CheckSquare, FileBarChart,
-  Users, Building2, Layers, ChevronLeft, ChevronRight, LogOut, User, NotebookPen } from 'lucide-react'
+  Users, Building2, Layers, Handshake, ChevronLeft, ChevronRight, LogOut, User, NotebookPen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
@@ -28,6 +28,7 @@ const adminItems: NavItem[] = [
   { label: 'Pengguna', path: '/admin/pengguna', icon: Users, roles: ['super_admin'] },
   { label: 'Master Pokja', path: '/admin/pokja', icon: Building2, roles: ['super_admin'] },
   { label: 'Master Program', path: '/admin/program', icon: Layers, roles: ['super_admin'] },
+  { label: 'Master Mitra', path: '/admin/mitra', icon: Handshake, roles: ['super_admin'] },
 ]
 
 /**

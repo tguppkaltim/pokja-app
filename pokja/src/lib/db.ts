@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, KegiatanMitra, Mitra, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 import { formatTanggalPanjang } from '@/lib/utils'
 import { bandingkanPokok } from '@/lib/master-program'
 
@@ -116,6 +116,77 @@ export async function updateProgramPrioritas(id: number, data: Partial<ProgramPr
 export async function deleteProgramPrioritas(id: number): Promise<void> {
   const { error } = await supabase.from('program_prioritas').delete().eq('id', id)
   if (error) throw error
+}
+
+// ─── Mitra / OPD ─────────────────────────────────────────────────────────────
+
+type MitraBaru = Pick<Mitra, 'nama'> & Partial<Pick<Mitra, 'singkatan' | 'aktif'>>
+
+export async function fetchMitra(): Promise<Mitra[]> {
+  const { data, error } = await supabase.from('mitra').select('*').order('nama')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createMitra(data: MitraBaru): Promise<Mitra> {
+  const { data: hasil, error } = await supabase.from('mitra').insert(data).select().single()
+  if (error) throw error
+  return hasil
+}
+
+export async function updateMitra(id: number, data: Partial<MitraBaru>): Promise<void> {
+  const { error } = await supabase.from('mitra').update(data).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteMitra(id: number): Promise<void> {
+  const { error } = await supabase.from('mitra').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** Kaitan kegiatan ↔ mitra. Tanpa `kegiatanIds`, seluruh kaitan diambil. */
+export async function fetchKegiatanMitra(kegiatanIds?: number[]): Promise<KegiatanMitra[]> {
+  let q = supabase.from('kegiatan_mitra').select('*')
+  if (kegiatanIds) {
+    // .in([]) menghasilkan SQL yang tidak sah; daftar kosong berarti memang
+    // tidak ada yang perlu diambil.
+    if (kegiatanIds.length === 0) return []
+    q = q.in('kegiatan_id', kegiatanIds)
+  }
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Samakan daftar mitra satu kegiatan dengan `mitraBaru`.
+ *
+ * Selisihnya dihitung dulu, bukan hapus-semua-lalu-sisipkan-ulang: cara itu
+ * membuang dan membuat kembali baris yang sebenarnya tidak berubah, dan kalau
+ * penyisipannya gagal di tengah, kaitan yang tadinya benar ikut hilang.
+ */
+export async function setMitraKegiatan(kegiatanId: number, mitraBaru: number[]): Promise<void> {
+  const sekarang = await fetchKegiatanMitra([kegiatanId])
+  const diinginkan = new Set(mitraBaru)
+  const sudahAda = new Set(sekarang.map(k => k.mitra_id))
+
+  const akanDihapus = sekarang.filter(k => !diinginkan.has(k.mitra_id)).map(k => k.mitra_id)
+  if (akanDihapus.length > 0) {
+    const { error } = await supabase
+      .from('kegiatan_mitra')
+      .delete()
+      .eq('kegiatan_id', kegiatanId)
+      .in('mitra_id', akanDihapus)
+    if (error) throw error
+  }
+
+  const akanDitambah = mitraBaru.filter(id => !sudahAda.has(id))
+  if (akanDitambah.length > 0) {
+    const { error } = await supabase
+      .from('kegiatan_mitra')
+      .insert(akanDitambah.map(mitra_id => ({ kegiatan_id: kegiatanId, mitra_id })))
+    if (error) throw error
+  }
 }
 
 // ─── Kegiatan ─────────────────────────────────────────────────────────────────

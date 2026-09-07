@@ -12,9 +12,10 @@ import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan } from '@/lib/db'
+import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan, fetchKegiatanMitra, setMitraKegiatan } from '@/lib/db'
 import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { prioritasPerPokja } from '@/lib/master-program'
+import { PilihMitra } from '@/components/pilih-mitra'
 import { toast } from 'sonner'
 
 
@@ -23,15 +24,17 @@ const emptyForm = {
   program_pokok_id: '',
   program_prioritas_id: '',
   nama_kegiatan: '',
+  deskripsi: '',
   sasaran: '',
   pelaksana: '',
   anggaran: '',
   jadwal: [] as string[], // YYYY-MM-DD
+  mitra: [] as number[],
 }
 
 export default function KegiatanFormPage() {
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra } = useData()
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
@@ -45,7 +48,8 @@ export default function KegiatanFormPage() {
       Promise.all([
         fetchKegiatanById(parseInt(id)),
         fetchJadwal({ kegiatanId: parseInt(id) }),
-      ]).then(([existing, jadwalRows]) => {
+        fetchKegiatanMitra([parseInt(id)]),
+      ]).then(([existing, jadwalRows, mitraRows]) => {
         if (existing) {
           const jadwal = jadwalRows.map(j => j.tanggal)
           setForm({
@@ -53,10 +57,12 @@ export default function KegiatanFormPage() {
             program_pokok_id: String(existing.program_pokok_id),
             program_prioritas_id: existing.program_prioritas_id === null ? '' : String(existing.program_prioritas_id),
             nama_kegiatan: existing.nama_kegiatan,
+            deskripsi: existing.deskripsi,
             sasaran: existing.sasaran,
             pelaksana: existing.pelaksana,
             anggaran: String(existing.anggaran),
             jadwal,
+            mitra: mitraRows.map(m => m.mitra_id),
           })
         }
       }).finally(() => setIsLoading(false))
@@ -131,6 +137,7 @@ export default function KegiatanFormPage() {
         program_pokok_id: parseInt(form.program_pokok_id),
         program_prioritas_id: form.program_prioritas_id ? parseInt(form.program_prioritas_id) : null,
         nama_kegiatan: form.nama_kegiatan,
+        deskripsi: form.deskripsi,
         sasaran: form.sasaran,
         pelaksana: form.pelaksana,
         anggaran: parseInt(form.anggaran) || 0,
@@ -141,10 +148,12 @@ export default function KegiatanFormPage() {
       if (isEdit && id) {
         await updateKegiatan(parseInt(id), payload)
         await setJadwalKegiatan(parseInt(id), form.jadwal)
+        await setMitraKegiatan(parseInt(id), form.mitra)
         toast.success('Kegiatan berhasil diperbarui.')
       } else {
         const dibuat = await createKegiatan(payload as Parameters<typeof createKegiatan>[0])
         await setJadwalKegiatan(dibuat.id, form.jadwal)
+        await setMitraKegiatan(dibuat.id, form.mitra)
         toast.success('Kegiatan berhasil ditambahkan.')
       }
       navigate('/kegiatan')
@@ -247,6 +256,19 @@ export default function KegiatanFormPage() {
               <Textarea placeholder="Deskripsikan kegiatan secara singkat dan jelas..." value={form.nama_kegiatan} onChange={e => setForm(prev => ({ ...prev, nama_kegiatan: e.target.value }))} className="border-pkk-border min-h-20" />
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Deskripsi Kegiatan</Label>
+              <Textarea
+                placeholder="Latar belakang, rincian pelaksanaan, atau catatan lain. Boleh dikosongkan."
+                value={form.deskripsi}
+                onChange={e => setForm(prev => ({ ...prev, deskripsi: e.target.value }))}
+                className="border-pkk-border min-h-24"
+              />
+              <p className="text-xs text-gray-400">
+                Opsional. Untuk penjelasan yang terlalu panjang dimuat di Nama Kegiatan.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sasaran</Label>
@@ -256,6 +278,15 @@ export default function KegiatanFormPage() {
                 <Label>Pelaksana</Label>
                 <Input placeholder="Penanggung jawab pelaksanaan" value={form.pelaksana} onChange={e => setForm(prev => ({ ...prev, pelaksana: e.target.value }))} className="border-pkk-border" />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Mitra / OPD</Label>
+              <PilihMitra
+                daftarMitra={daftarMitra}
+                terpilih={form.mitra}
+                onChange={mitra => setForm(prev => ({ ...prev, mitra }))}
+              />
             </div>
 
             <div className="space-y-1.5">

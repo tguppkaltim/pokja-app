@@ -55,6 +55,22 @@ export interface ProgramPrioritas {
   created_at: string
 }
 
+export interface Mitra {
+  id: number
+  nama: string
+  /** Dipakai di tabel yang sempit; kosong berarti pakai nama panjangnya. */
+  singkatan: string
+  /** False = tidak muncul lagi sebagai pilihan, tapi kaitan lama tetap utuh. */
+  aktif: boolean
+  created_at: string
+}
+
+/** Satu baris tabel penghubung kegiatan ↔ mitra. */
+export interface KegiatanMitra {
+  kegiatan_id: number
+  mitra_id: number
+}
+
 export interface Kegiatan {
   id: number
   pokja_id: number
@@ -66,6 +82,8 @@ export interface Kegiatan {
    */
   program_prioritas_id: number | null
   nama_kegiatan: string
+  /** Penjelasan panjang, opsional. String kosong berarti belum diisi. */
+  deskripsi: string
   sasaran: string
   pelaksana: string
   anggaran: number

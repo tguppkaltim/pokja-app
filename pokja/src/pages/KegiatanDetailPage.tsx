@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText } from 'lucide-react'
+import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, Handshake } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,7 @@ import { jalurPrioritas } from '@/lib/master-program'
 import { BadgeStatus, BadgePeringatan } from '@/components/badge-status'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal } from '@/lib/db'
+import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal, fetchKegiatanMitra } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, EvidenceFile, JadwalKegiatan } from '@/types'
 import { BULAN_FULL } from '@/lib/kalender'
 
@@ -23,8 +23,9 @@ export default function KegiatanDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra } = useData()
   const [kegiatan, setKegiatan] = useState<Kegiatan | null>(null)
+  const [mitraKegiatan, setMitraKegiatan] = useState<number[]>([])
   const [realisasiList, setRealisasiList] = useState<RealisasiKegiatan[]>([])
   const [jadwalList, setJadwalList] = useState<JadwalKegiatan[]>([])
   const [evidenceMap, setEvidenceMap] = useState<Record<number, EvidenceFile[]>>({})
@@ -37,9 +38,11 @@ export default function KegiatanDetailPage() {
       fetchKegiatanById(kegId),
       fetchRealisasi({ kegiatanId: kegId }),
       fetchJadwal({ kegiatanId: kegId }),
-    ]).then(async ([k, realisasi, jadwal]) => {
+      fetchKegiatanMitra([kegId]),
+    ]).then(async ([k, realisasi, jadwal, kaitan]) => {
       setKegiatan(k)
       setJadwalList(jadwal)
+      setMitraKegiatan(kaitan.map(m => m.mitra_id))
       setRealisasiList(realisasi.sort((a, b) => a.bulan - b.bulan))
       const evMap: Record<number, EvidenceFile[]> = {}
       await Promise.all(realisasi.map(async r => {
@@ -121,6 +124,24 @@ export default function KegiatanDetailPage() {
               <div><p className="text-gray-400 text-xs">Pelaksana</p><p className="text-gray-700">{kegiatan.pelaksana || '-'}</p></div>
             </div>
             <div className="flex items-start gap-2 text-sm">
+              <Handshake className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-gray-400 text-xs">Mitra / OPD</p>
+                {mitraKegiatan.length > 0 ? (
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {mitraKegiatan.map(mid => {
+                      const m = daftarMitra.find(x => x.id === mid)
+                      return (
+                        <Badge key={mid} variant="outline" className="border-pkk-border text-pkk text-xs font-normal">
+                          {m?.nama ?? `Mitra #${mid}`}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                ) : <p className="text-gray-700">-</p>}
+              </div>
+            </div>
+            <div className="flex items-start gap-2 text-sm">
               <DollarSign className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div>
                 <p className="text-gray-400 text-xs">Anggaran</p>
@@ -135,6 +156,21 @@ export default function KegiatanDetailPage() {
               <div><p className="text-gray-400 text-xs">Tahun</p><p className="text-gray-700">{kegiatan.tahun}</p></div>
             </div>
           </div>
+
+          {/* Hanya muncul kalau diisi: baris "Deskripsi: -" yang selalu ada
+              hanya menambah kebisingan pada kegiatan yang tidak memerlukannya. */}
+          {kegiatan.deskripsi && (
+            <>
+              <Separator className="bg-pkk-tint" />
+              <div>
+                <p className="mb-1 text-xs text-gray-400">Deskripsi Kegiatan</p>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                  {kegiatan.deskripsi}
+                </p>
+              </div>
+            </>
+          )}
+
           <Separator className="bg-pkk-tint" />
           <div>
             <div className="flex items-center gap-2 mb-2">
