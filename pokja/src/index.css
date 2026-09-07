@@ -28,6 +28,13 @@
     --color-status-danger-tint: var(--status-danger-tint);
     --color-status-warning: var(--status-warning);
     --color-status-warning-tint: var(--status-warning-tint);
+
+    /* Animasi StarBorder (React Bits). Didaftarkan di @theme supaya tersedia
+       sebagai utilitas `animate-star-movement-*`, bukan kelas CSS lepas.
+       Penjaga prefers-reduced-motion di bawah menghentikannya dengan
+       sendirinya karena ini animasi CSS, bukan JavaScript. */
+    --animate-star-movement-top: star-movement-top linear infinite alternate;
+    --animate-star-movement-bottom: star-movement-bottom linear infinite alternate;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -153,6 +160,19 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Keyframes StarBorder — nilainya persis dari React Bits agar geraknya sama
+   seperti yang dirancang pembuatnya.
+   Copyright (c) 2026 David Haz — MIT + Commons Clause. https://reactbits.dev */
+@keyframes star-movement-bottom {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(-100%, 0%); opacity: 0; }
+}
+
+@keyframes star-movement-top {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(100%, 0%); opacity: 0; }
 }
 
 /* ── Gerak ──────────────────────────────────────────────────────────────

@@ -19,18 +19,23 @@ import MasterPokjaPage from '@/pages/admin/MasterPokjaPage'
 import MasterProgramPage from '@/pages/admin/MasterProgramPage'
 import MasterMitraPage from '@/pages/admin/MasterMitraPage'
 import ProfilPage from '@/pages/ProfilPage'
+import { StarBorder } from '@/components/ui/star-border'
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-pkk-surface flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <div className="w-10 h-10 bg-pkk rounded-xl flex items-center justify-center mx-auto animate-pulse">
-            <span className="text-white text-sm font-bold">PKK</span>
-          </div>
-          <p className="text-sm text-gray-400">Memuat...</p>
+      <div className="flex min-h-screen items-center justify-center bg-pkk-surface">
+        <div className="space-y-4 text-center">
+          <StarBorder>
+            <img src="/logo-pkk.png" alt="" className="mx-auto h-16 w-auto" />
+          </StarBorder>
+          {/* aria-live agar pembaca layar mengumumkan keadaan memuat; tanpa itu
+              layar ini tidak terdengar sama sekali. */}
+          <p role="status" aria-live="polite" className="text-sm text-gray-500">
+            Memuat…
+          </p>
         </div>
       </div>
     )
