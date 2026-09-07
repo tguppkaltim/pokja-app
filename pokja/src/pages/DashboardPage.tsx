@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
-import { BULAN_LABELS } from '@/lib/kalender'
+import { BULAN_LABELS, BULAN_FULL } from '@/lib/kalender'
 
 const CURRENT_MONTH = new Date().getMonth() + 1
 const CURRENT_YEAR = new Date().getFullYear()
@@ -199,7 +199,7 @@ export default function DashboardPage() {
   // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
   const pokjaFilterItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]
   const tahunItems = [{ value: '2026', label: '2026' }, { value: '2025', label: '2025' }]
-  const bulanItems = BULAN_LABELS.map((b, i) => ({ value: String(i + 1), label: b }))
+  const bulanItems = BULAN_FULL.map((b, i) => ({ value: String(i + 1), label: b }))
 
   // Jaga agar rentangnya tetap masuk akal: ujung yang lain ikut bergeser
   // kalau pengguna memilih bulan awal yang melewati bulan akhir, atau sebaliknya.
@@ -237,8 +237,8 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-pkk">Dashboard Monitoring</h1>
           <p className="text-sm text-gray-500 mt-1">
             Tahun {tahun} — {dari === sampai
-              ? `Bulan ${BULAN_LABELS[dari - 1]}`
-              : `${BULAN_LABELS[dari - 1]} s/d ${BULAN_LABELS[sampai - 1]}`} {tahun}
+              ? `Bulan ${BULAN_FULL[dari - 1]}`
+              : `${BULAN_FULL[dari - 1]} s/d ${BULAN_FULL[sampai - 1]}`} {tahun}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -250,14 +250,14 @@ export default function DashboardPage() {
           </Select>
           <div className="flex items-center gap-1.5">
             <Select items={bulanItems} value={dariBulan} onValueChange={v => v && gantiDari(v)}>
-              <SelectTrigger className="w-24 border-pkk-border text-sm" aria-label="Bulan awal"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-36 border-pkk-border text-sm" aria-label="Bulan awal"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <span className="text-sm text-gray-400 shrink-0">s/d</span>
             <Select items={bulanItems} value={sampaiBulan} onValueChange={v => v && gantiSampai(v)}>
-              <SelectTrigger className="w-24 border-pkk-border text-sm" aria-label="Bulan akhir"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-36 border-pkk-border text-sm" aria-label="Bulan akhir"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {bulanItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
               </SelectContent>
@@ -398,7 +398,7 @@ export default function DashboardPage() {
       <Card className="border-pkk-border transisi-kartu hover:shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-base text-pkk">Tren Realisasi Bulanan</CardTitle>
-          <CardDescription>Perbandingan sesi dijadwalkan vs terlaksana ({BULAN_LABELS[dari - 1]}–{BULAN_LABELS[sampai - 1]} {tahun})</CardDescription>
+          <CardDescription>Perbandingan sesi dijadwalkan vs terlaksana ({BULAN_FULL[dari - 1]}–{BULAN_FULL[sampai - 1]} {tahun})</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
@@ -479,7 +479,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base text-pkk">Ringkasan Kegiatan</CardTitle>
-              <CardDescription>Status kegiatan bulan {BULAN_LABELS[sampai - 1]} {tahun}</CardDescription>
+              <CardDescription>Status kegiatan bulan {BULAN_FULL[sampai - 1]} {tahun}</CardDescription>
             </div>
           </div>
         </CardHeader>
