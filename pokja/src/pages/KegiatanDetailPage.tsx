@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, Handshake } from 'lucide-react'
+import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, Handshake, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
@@ -109,7 +109,15 @@ export default function KegiatanDetailPage() {
                   <span className="text-gray-700">{jalur.prioritas.name}</span>
                 </p>
               )}
-              <CardTitle className="text-xl text-gray-800 leading-snug">{kegiatan.nama_kegiatan}</CardTitle>
+              <CardTitle className="text-xl leading-snug text-gray-800">
+                {kegiatan.isu_strategis && (
+                  <Star
+                    aria-label="Isu strategis"
+                    className="mr-1.5 -mt-1 inline h-4 w-4 fill-pkk text-pkk"
+                  />
+                )}
+                {kegiatan.nama_kegiatan}
+              </CardTitle>
             </div>
           </div>
         </CardHeader>

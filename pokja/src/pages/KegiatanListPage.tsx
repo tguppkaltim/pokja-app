@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { Fragment, useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Pencil, Eye, Trash2 } from 'lucide-react'
+import { Plus, Search, Pencil, Eye, Trash2, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Input } from '@/components/ui/input'
@@ -15,8 +15,8 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatan, deleteKegiatan, fetchJadwal, fetchKegiatanMitra } from '@/lib/db'
-import type { Kegiatan, JadwalKegiatan, KegiatanMitra } from '@/types'
+import { fetchKegiatan, deleteKegiatan, fetchJadwal, fetchKegiatanMitra, fetchRealisasi } from '@/lib/db'
+import type { Kegiatan, JadwalKegiatan, KegiatanMitra, RealisasiKegiatan } from '@/types'
 
 import { formatTanggalPendek } from '@/lib/utils'
 import { jalurPrioritas } from '@/lib/master-program'
@@ -39,12 +39,15 @@ export default function KegiatanListPage() {
   const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
   const [allJadwal, setAllJadwal] = useState<JadwalKegiatan[]>([])
   const [kaitanMitra, setKaitanMitra] = useState<KegiatanMitra[]>([])
+  const [realisasi, setRealisasi] = useState<RealisasiKegiatan[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
-    Promise.all([fetchKegiatan(opts), fetchJadwal({}), fetchKegiatanMitra()])
-      .then(([k, j, m]) => { setAllKegiatan(k); setAllJadwal(j); setKaitanMitra(m) })
+    // Realisasi hanya dipakai untuk tahu kegiatan mana yang belum tersentuh,
+    // bukan untuk ditampilkan; yang dibaca cuma ada-tidaknya barisnya.
+    Promise.all([fetchKegiatan(opts), fetchJadwal({}), fetchKegiatanMitra(), fetchRealisasi({})])
+      .then(([k, j, m, r]) => { setAllKegiatan(k); setAllJadwal(j); setKaitanMitra(m); setRealisasi(r) })
       .finally(() => setIsLoading(false))
   }, [user])
 
@@ -73,8 +76,14 @@ export default function KegiatanListPage() {
             return m ? (m.singkatan || m.nama) : null
           })
           .filter((n): n is string => n !== null)
+        // "Belum ada realisasi" berarti belum satu pun sesi dilaporkan.
+        // Kegiatan yang sudah punya satu laporan turun ke urutan biasa —
+        // penandanya berarti "belum tersentuh", bukan "belum selesai".
+        const belumAdaRealisasi = !realisasi.some(r => r.kegiatan_id === k.id)
         return {
           ...k,
+          belumAdaRealisasi,
+          disorot: k.isu_strategis && belumAdaRealisasi,
           pokjaName: pokjaList.find(p => p.id === k.pokja_id)?.name ?? '-',
           programName: programPokok.find(p => p.id === k.program_pokok_id)?.name ?? '-',
           unggulanName: jalur?.unggulan.name ?? null,
@@ -84,8 +93,17 @@ export default function KegiatanListPage() {
           jadwal: allJadwal.filter(j => j.kegiatan_id === k.id).map(j => formatTanggalPendek(j.tanggal)).join(', '),
         }
       })
-  }, [allKegiatan, allJadwal, kaitanMitra, daftarMitra, filterPokja, filterTahun, search,
+      // Isu strategis yang belum tersentuh naik ke atas; sisanya tetap urut id
+      // seperti sebelumnya. sort() mengubah array di tempat, tapi array ini
+      // baru dibuat oleh map() di atas jadi tidak ada yang ikut berubah.
+      .sort((a, b) => Number(b.disorot) - Number(a.disorot) || a.id - b.id)
+  }, [allKegiatan, allJadwal, kaitanMitra, daftarMitra, realisasi, filterPokja, filterTahun, search,
       pokjaList, programPokok, programUnggulan, programPrioritas])
+
+  // Pemisah hanya ditampilkan kalau kedua kelompok memang berisi. Judul
+  // kelompok di atas daftar yang seluruhnya satu jenis cuma menambah bising.
+  const jumlahDisorot = data.filter(k => k.disorot).length
+  const pakaiPemisah = jumlahDisorot > 0 && jumlahDisorot < data.length
 
   // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
   const pokjaItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]
@@ -172,7 +190,25 @@ export default function KegiatanListPage() {
             </TableHeader>
             <TableBody>
               {data.map((k, idx) => (
-                <TableRow key={k.id} className={idx % 2 === 0 ? 'hover:bg-pkk-tint/40' : 'bg-pkk-tint/30 hover:bg-pkk-tint/60'}>
+                <Fragment key={k.id}>
+                  {pakaiPemisah && idx === 0 && (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={11} className="bg-pkk-tint/60 px-4 py-1.5 text-xs font-medium text-pkk">
+                        <span className="flex items-center gap-1.5">
+                          <Star className="h-3.5 w-3.5 fill-pkk text-pkk" />
+                          Isu strategis, belum ada realisasi
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {pakaiPemisah && idx === jumlahDisorot && (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={11} className="bg-gray-50 px-4 py-1.5 text-xs font-medium text-gray-500">
+                        Kegiatan lainnya
+                      </TableCell>
+                    </TableRow>
+                  )}
+                <TableRow className={idx % 2 === 0 ? 'hover:bg-pkk-tint/40' : 'bg-pkk-tint/30 hover:bg-pkk-tint/60'}>
                   <TableCell className="px-4 py-3 text-gray-400">{idx + 1}</TableCell>
                   <TableCell className="px-4 py-3 hidden md:table-cell">
                     <Badge variant="outline" className="border-pkk-soft text-pkk-accent text-xs">{k.pokjaName}</Badge>
@@ -191,7 +227,15 @@ export default function KegiatanListPage() {
                       : <span className="text-gray-300">—</span>}
                   </TableCell>
                   <TableCell className="px-4 py-3 font-medium text-gray-800 max-w-xs whitespace-normal">
-                    <p className="line-clamp-2">{k.nama_kegiatan}</p>
+                    <p className="line-clamp-2">
+                      {k.isu_strategis && (
+                        <Star
+                          aria-label="Isu strategis"
+                          className="mr-1 -mt-0.5 inline h-3.5 w-3.5 fill-pkk text-pkk"
+                        />
+                      )}
+                      {k.nama_kegiatan}
+                    </p>
                     {k.belumDipetakan && (
                       <BadgePeringatan
                         title="Kegiatan ini dibuat sebelum master program diadopsi. Buka Edit untuk memilih Program Prioritasnya."
@@ -249,6 +293,7 @@ export default function KegiatanListPage() {
                     </div>
                   </TableCell>
                 </TableRow>
+                </Fragment>
               ))}
               {data.length === 0 && (
                 <TableRow className="hover:bg-transparent">

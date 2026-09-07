@@ -191,6 +191,7 @@ export interface Database {
           program_prioritas_id: number | null
           nama_kegiatan: string
           deskripsi: string
+          isu_strategis: boolean
           sasaran: string
           pelaksana: string
           anggaran: number
@@ -205,6 +206,7 @@ export interface Database {
           program_prioritas_id?: number | null
           nama_kegiatan: string
           deskripsi?: string
+          isu_strategis?: boolean
           sasaran: string
           pelaksana: string
           anggaran: number
@@ -219,6 +221,7 @@ export interface Database {
           program_prioritas_id?: number | null
           nama_kegiatan?: string
           deskripsi?: string
+          isu_strategis?: boolean
           sasaran?: string
           pelaksana?: string
           anggaran?: number

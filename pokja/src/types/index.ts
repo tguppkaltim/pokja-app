@@ -84,6 +84,8 @@ export interface Kegiatan {
   nama_kegiatan: string
   /** Penjelasan panjang, opsional. String kosong berarti belum diisi. */
   deskripsi: string
+  /** Ditandai isu strategis. Yang bertanda dan belum punya realisasi naik ke atas daftar. */
+  isu_strategis: boolean
   sasaran: string
   pelaksana: string
   anggaran: number

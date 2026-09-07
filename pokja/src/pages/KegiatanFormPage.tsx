@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Save, Plus, X } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -25,6 +26,7 @@ const emptyForm = {
   program_prioritas_id: '',
   nama_kegiatan: '',
   deskripsi: '',
+  isu_strategis: false,
   sasaran: '',
   pelaksana: '',
   anggaran: '',
@@ -58,6 +60,7 @@ export default function KegiatanFormPage() {
             program_prioritas_id: existing.program_prioritas_id === null ? '' : String(existing.program_prioritas_id),
             nama_kegiatan: existing.nama_kegiatan,
             deskripsi: existing.deskripsi,
+            isu_strategis: existing.isu_strategis,
             sasaran: existing.sasaran,
             pelaksana: existing.pelaksana,
             anggaran: String(existing.anggaran),
@@ -138,6 +141,7 @@ export default function KegiatanFormPage() {
         program_prioritas_id: form.program_prioritas_id ? parseInt(form.program_prioritas_id) : null,
         nama_kegiatan: form.nama_kegiatan,
         deskripsi: form.deskripsi,
+        isu_strategis: form.isu_strategis,
         sasaran: form.sasaran,
         pelaksana: form.pelaksana,
         anggaran: parseInt(form.anggaran) || 0,
@@ -268,6 +272,23 @@ export default function KegiatanFormPage() {
                 Opsional. Untuk penjelasan yang terlalu panjang dimuat di Nama Kegiatan.
               </p>
             </div>
+
+            <label className="flex items-start gap-2.5 rounded-lg border border-pkk-border bg-pkk-surface px-3 py-2.5 transisi-warna hover:border-pkk-soft">
+              <Checkbox
+                checked={form.isu_strategis}
+                onCheckedChange={v => setForm(prev => ({ ...prev, isu_strategis: v === true }))}
+                className="mt-0.5"
+              />
+              <span className="text-sm">
+                <span className="flex items-center gap-1.5 font-medium text-gray-700">
+                  <Star className="h-3.5 w-3.5 text-pkk" /> Isu Strategis
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Selama belum ada realisasi tercatat, kegiatan ini tampil di bagian atas
+                  daftar Rencana Kegiatan. Turun ke urutan biasa setelah sesi pertamanya dilaporkan.
+                </span>
+              </span>
+            </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
