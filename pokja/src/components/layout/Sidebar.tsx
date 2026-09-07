@@ -72,7 +72,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className={cn('flex items-center gap-3 px-4 py-5 border-b border-white/14', collapsed && 'justify-center px-2')}>
         <div className="flex-shrink-0 w-9 h-9 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-          <img src="/logo-pemprov.png" alt="Logo Pemprov Kaltim" className="w-full h-full object-contain p-0.5" />
+          <img src="/logo-pkk.png" alt="Logo Tim Penggerak PKK" className="w-full h-full object-contain p-0.5" />
         </div>
         {!collapsed && (
           <div className="min-w-0">

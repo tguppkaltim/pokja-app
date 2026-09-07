@@ -54,7 +54,7 @@ export default function LoginPage() {
         {/* ── Kiri: form ─────────────────────────────────────────────── */}
         <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14 lg:py-16">
           <motion.div {...masuk(0)} className="mb-10 flex items-center gap-2.5">
-            <img src="/logo-pemprov.png" alt="" className="h-8 w-auto" />
+            <img src="/logo-pkk.png" alt="" className="h-8 w-auto" />
             <span className="text-sm font-bold text-pkk">SIM PKK Kalimantan Timur</span>
           </motion.div>
 
@@ -163,7 +163,7 @@ export default function LoginPage() {
 
           <div className="relative flex h-full flex-col items-center justify-center gap-6 px-12 text-center">
             <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-white/95 shadow-lg">
-              <img src="/logo-pemprov.png" alt="Logo Pemerintah Provinsi Kalimantan Timur" className="h-20 w-auto" />
+              <img src="/logo-pkk.png" alt="Logo Tim Penggerak PKK" className="h-20 w-auto" />
             </div>
             <div>
               <p className="text-2xl font-bold text-white">SIM PKK Kalimantan Timur</p>
