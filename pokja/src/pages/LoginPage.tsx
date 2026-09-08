@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { BlurText } from '@/components/ui/blur-text'
+import { Aurora } from '@/components/ui/aurora'
 import { useAuth } from '@/contexts/auth-context'
 
 export default function LoginPage() {
@@ -49,8 +50,21 @@ export default function LoginPage() {
         }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-pkk-surface p-4 lg:p-8">
-      <div className="grid w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-pkk-border lg:grid-cols-2">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-pkk-surface p-4 lg:p-8">
+      {/* Latar Aurora. aria-hidden karena murni hiasan — tidak ada isi yang
+          perlu diumumkan, dan pointer-events-none supaya kanvasnya tidak
+          menghalangi klik ke form di atasnya. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <Aurora
+          colorStops={['#0047AB', '#5E8BC9', '#2349B5']}
+          amplitude={1.0}
+          blend={0.6}
+          speed={0.4}
+          lightMode
+        />
+      </div>
+
+      <div className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-pkk-border lg:grid-cols-2">
         {/* ── Kiri: form ─────────────────────────────────────────────── */}
         <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14 lg:py-16">
           <motion.div {...masuk(0)} className="mb-10 flex items-center gap-2.5">
