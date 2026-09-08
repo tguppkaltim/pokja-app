@@ -64,10 +64,10 @@ export default function LoginPage() {
         />
       </div>
 
-      <div className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-pkk-border lg:grid-cols-2">
+      <div className="relative z-10 grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-pkk-border lg:grid-cols-2">
         {/* ── Kiri: form ─────────────────────────────────────────────── */}
-        <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14 lg:py-16">
-          <motion.div {...masuk(0)} className="mb-10 flex items-center gap-2.5">
+        <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-12 lg:py-12">
+          <motion.div {...masuk(0)} className="mb-8 flex items-center gap-2.5">
             <img src="/logo-pkk.png" alt="" className="h-8 w-auto" />
             <span className="text-sm font-bold text-pkk">SIM PKK Kalimantan Timur</span>
           </motion.div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
             Masuk untuk melanjutkan ke sistem monitoring TP PKK Provinsi Kalimantan Timur.
           </motion.p>
 
-          <motion.form {...masuk(0.62)} onSubmit={handleSubmit} className="mt-9 max-w-sm space-y-4">
+          <motion.form {...masuk(0.62)} onSubmit={handleSubmit} className="mt-8 max-w-sm space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -146,7 +146,7 @@ export default function LoginPage() {
             </Button>
           </motion.form>
 
-          <motion.div {...masuk(0.74)} className="mt-12 max-w-sm">
+          <motion.div {...masuk(0.74)} className="mt-10 max-w-sm">
             <p className="text-xs text-gray-400">
               Lupa password? Hubungi Administrator sistem.
             </p>
