@@ -22,3 +22,6 @@ supabase/migrations/003_update_profiles.sql
 master-program.xlsx
 # Berkas kunci Excel saat dokumen sedang dibuka.
 ~$*
+
+# Sisa kerja Supabase CLI, bukan bagian proyek.
+supabase/.temp/
