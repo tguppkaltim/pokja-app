@@ -26,6 +26,17 @@ const KUNCI_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 // melampaui umur pakai sistem.
 const DURASI_BAN = '876000h'
 
+// Peran yang terikat pada satu pokja, jadi wajib menyebut pokja_id.
+//
+// Salinan ketiga dari daftar yang sama: pokja/src/lib/hak-akses.ts mengatur
+// tampilan, migrasi 018 menegakkannya di basis data, dan yang ini menjaga
+// pembuatan akun. Edge Function berjalan di Deno terpisah dan tidak bisa
+// mengimpor dari src, jadi ketiganya harus diubah bersamaan.
+//
+// Kalau daftar ini tertinggal, akun sekretariat baru lahir tanpa pokja_id —
+// terlihat normal di daftar Pengguna, tapi tidak bisa menyentuh apa pun.
+const PERAN_TERIKAT_POKJA = ['operator', 'sekretariat']
+
 function jawab(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -74,8 +85,8 @@ Deno.serve(async (req) => {
       if (String(password).length < 8) {
         return jawab({ error: 'Password minimal 8 karakter.' }, 400)
       }
-      if (role === 'operator' && !pokja_id) {
-        return jawab({ error: 'Operator wajib punya pokja.' }, 400)
+      if (PERAN_TERIKAT_POKJA.includes(role) && !pokja_id) {
+        return jawab({ error: `Peran ${role} wajib punya pokja.` }, 400)
       }
 
       const { data: dibuat, error: errBuat } = await admin.auth.admin.createUser({
@@ -86,18 +97,48 @@ Deno.serve(async (req) => {
       })
       if (errBuat) return jawab({ error: errBuat.message }, 400)
 
-      // Trigger handle_new_user sudah membuat baris profiles dengan role
-      // 'viewer'; di sini disesuaikan ke role dan pokja yang dipilih.
-      const { error: errProfilBaru } = await admin
+      // upsert, BUKAN update — dan barisnya wajib dikembalikan.
+      //
+      // Versi sebelumnya memakai update() dan menggantungkan diri pada trigger
+      // handle_new_user untuk membuat barisnya lebih dulu. Trigger itu sengaja
+      // menelan semua galat (lihat migrasi 004: "tidak memblokir pembuatan user
+      // jika insert profiles gagal"), dan update() pada nol baris BUKAN galat
+      // bagi PostgREST. Gabungan keduanya menghasilkan akun yang tercatat di
+      // auth.users tanpa baris profiles, sementara fungsi ini melaporkan
+      // sukses — akun yang tidak muncul di daftar Pengguna dan tidak bisa
+      // login, tanpa satu pun pesan galat di mana pun.
+      //
+      // upsert bekerja baik trigger-nya berhasil maupun tidak, dan
+      // .select().single() memaksa nol baris menjadi galat.
+      const { data: profilBaru, error: errProfilBaru } = await admin
         .from('profiles')
-        .update({
-          full_name,
-          role,
-          pokja_id: role === 'operator' ? pokja_id : null,
-          is_active: true,
-        })
-        .eq('id', dibuat.user.id)
-      if (errProfilBaru) return jawab({ error: errProfilBaru.message }, 400)
+        .upsert(
+          {
+            id: dibuat.user.id,
+            full_name,
+            // email ikut ditulis: kalau trigger gagal, tidak ada yang mengisinya
+            // dan kolomnya not null.
+            email,
+            role,
+            pokja_id: PERAN_TERIKAT_POKJA.includes(role) ? pokja_id : null,
+            is_active: true,
+          },
+          { onConflict: 'id' },
+        )
+        .select('id')
+        .single()
+
+      if (errProfilBaru || !profilBaru) {
+        // Akun auth sudah terlanjur dibuat. Dibersihkan supaya tidak
+        // meninggalkan akun cacat yang tak terlihat dan tak bisa login —
+        // keadaan yang justru memicu perbaikan ini. profiles memakai
+        // on delete cascade, jadi sisa barisnya ikut terbawa.
+        await admin.auth.admin.deleteUser(dibuat.user.id)
+        return jawab(
+          { error: `Akun gagal dibuat: ${errProfilBaru?.message ?? 'profil pengguna tidak tersimpan.'}` },
+          400,
+        )
+      }
 
       return jawab({ ok: true, user_id: dibuat.user.id })
     }

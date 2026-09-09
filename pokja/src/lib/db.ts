@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, KegiatanMitra, Mitra, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, KegiatanMitra, KegiatanWilayah, Mitra, Wilayah, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 import { formatTanggalPanjang } from '@/lib/utils'
 import { bandingkanPokok } from '@/lib/master-program'
 
@@ -189,6 +189,57 @@ export async function setMitraKegiatan(kegiatanId: number, mitraBaru: number[]):
   }
 }
 
+// ─── Wilayah / lokus ─────────────────────────────────────────────────────────
+
+export async function fetchWilayah(): Promise<Wilayah[]> {
+  const { data, error } = await supabase.from('wilayah').select('*').order('urutan').order('id')
+  if (error) throw error
+  return data ?? []
+}
+
+/** Lokus kegiatan. Tanpa `kegiatanIds`, seluruh kaitan diambil. */
+export async function fetchKegiatanWilayah(kegiatanIds?: number[]): Promise<KegiatanWilayah[]> {
+  let q = supabase.from('kegiatan_wilayah').select('*')
+  if (kegiatanIds) {
+    if (kegiatanIds.length === 0) return []
+    q = q.in('kegiatan_id', kegiatanIds)
+  }
+  const { data, error } = await q
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Samakan lokus satu kegiatan dengan `wilayahBaru`.
+ *
+ * Selisihnya dihitung dulu, seperti setMitraKegiatan: menghapus semua lalu
+ * menyisipkan ulang akan membuang baris yang tidak berubah, dan kalau
+ * penyisipannya gagal di tengah, lokus yang tadinya benar ikut hilang.
+ */
+export async function setWilayahKegiatan(kegiatanId: number, wilayahBaru: number[]): Promise<void> {
+  const sekarang = await fetchKegiatanWilayah([kegiatanId])
+  const diinginkan = new Set(wilayahBaru)
+  const sudahAda = new Set(sekarang.map(k => k.wilayah_id))
+
+  const akanDihapus = sekarang.filter(k => !diinginkan.has(k.wilayah_id)).map(k => k.wilayah_id)
+  if (akanDihapus.length > 0) {
+    const { error } = await supabase
+      .from('kegiatan_wilayah')
+      .delete()
+      .eq('kegiatan_id', kegiatanId)
+      .in('wilayah_id', akanDihapus)
+    if (error) throw error
+  }
+
+  const akanDitambah = wilayahBaru.filter(id => !sudahAda.has(id))
+  if (akanDitambah.length > 0) {
+    const { error } = await supabase
+      .from('kegiatan_wilayah')
+      .insert(akanDitambah.map(wilayah_id => ({ kegiatan_id: kegiatanId, wilayah_id })))
+    if (error) throw error
+  }
+}
+
 // ─── Kegiatan ─────────────────────────────────────────────────────────────────
 
 export async function fetchKegiatan(opts?: { pokjaId?: number; tahun?: number }): Promise<Kegiatan[]> {
@@ -303,6 +354,8 @@ export async function upsertRealisasi(data: {
   status: 'terlaksana' | 'tidak_terlaksana'
   tanggal_pelaksanaan: string | null
   catatan: string
+  /** Tempat pelaksanaan sebenarnya. Opsional; kosong berarti belum diisi. */
+  lokasi: string
   anggaran_aktual: number
   created_by: string
 }): Promise<RealisasiKegiatan> {

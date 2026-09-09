@@ -15,6 +15,7 @@ import { buatPengguna, setAktifPengguna, resetPasswordPengguna } from '@/lib/adm
 import type { User, UserRole } from '@/types'
 import { toast } from 'sonner'
 import { LABEL_PERAN, BADGE_PERAN } from '@/lib/peran'
+import { wajibPilihPokja } from '@/lib/hak-akses'
 
 // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
 const ROLE_ITEMS = (Object.keys(LABEL_PERAN) as UserRole[])
@@ -56,17 +57,21 @@ export default function PenggunaPage() {
 
   async function handleSave() {
     if (!form.full_name) { toast.error('Nama wajib diisi.'); return }
-    if (form.role === 'operator' && !form.pokja_id) { toast.error('Operator harus memilih Pokja.'); return }
+    if (wajibPilihPokja(form.role) && !form.pokja_id) { toast.error(`${LABEL_PERAN[form.role as UserRole]} harus memilih Pokja.`); return }
     if (!editUser) return
     setIsSaving(true)
     try {
+      // Pokja hanya disimpan untuk peran yang memang terikat. Tanpa ini,
+      // mengubah peran dari operator ke viewer menyisakan pokja lama yang
+      // tidak lagi berarti apa-apa.
+      const pokjaBaru = wajibPilihPokja(form.role) && form.pokja_id ? parseInt(form.pokja_id) : null
       await updateProfile(editUser.id, {
         full_name: form.full_name,
         role: form.role as User['role'],
-        pokja_id: form.pokja_id ? parseInt(form.pokja_id) : null,
+        pokja_id: pokjaBaru,
         is_active: form.is_active,
       })
-      setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...form, role: form.role as User['role'], pokja_id: form.pokja_id ? parseInt(form.pokja_id) : null } : u))
+      setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...form, role: form.role as User['role'], pokja_id: pokjaBaru } : u))
       toast.success('Data pengguna diperbarui.')
       setIsOpen(false)
     } catch {
@@ -95,7 +100,7 @@ export default function PenggunaPage() {
       return
     }
     if (password.length < 8) { toast.error('Password minimal 8 karakter.'); return }
-    if (role === 'operator' && !pokja_id) { toast.error('Operator harus memilih Pokja.'); return }
+    if (wajibPilihPokja(role) && !pokja_id) { toast.error(`${LABEL_PERAN[role as UserRole]} harus memilih Pokja.`); return }
 
     setIsSaving(true)
     try {
@@ -104,7 +109,7 @@ export default function PenggunaPage() {
         email: email.trim(),
         password,
         role: role as User['role'],
-        pokja_id: role === 'operator' ? parseInt(pokja_id) : null,
+        pokja_id: wajibPilihPokja(role) ? parseInt(pokja_id) : null,
       })
       toast.success(`Akun ${full_name} dibuat. Sampaikan passwordnya ke pengguna.`)
       setTambahTerbuka(false)
@@ -260,7 +265,7 @@ export default function PenggunaPage() {
                 </SelectContent>
               </Select>
             </div>
-            {form.role === 'operator' && (
+            {wajibPilihPokja(form.role) && (
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
                 <Select items={pokjaItems} value={form.pokja_id} onValueChange={v => v && setForm(p => ({ ...p, pokja_id: v }))}>
@@ -311,7 +316,7 @@ export default function PenggunaPage() {
                 </SelectContent>
               </Select>
             </div>
-            {formTambah.role === 'operator' && (
+            {wajibPilihPokja(formTambah.role) && (
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
                 <Select items={pokjaItems} value={formTambah.pokja_id} onValueChange={v => v && setFormTambah(p => ({ ...p, pokja_id: v }))}>

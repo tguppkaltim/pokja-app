@@ -14,12 +14,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
+import { bolehKelolaKegiatan, pokjaTerikat, saringPokja } from '@/lib/hak-akses'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatan, deleteKegiatan, fetchJadwal, fetchKegiatanMitra, fetchRealisasi } from '@/lib/db'
-import type { Kegiatan, JadwalKegiatan, KegiatanMitra, RealisasiKegiatan } from '@/types'
+import { fetchKegiatan, deleteKegiatan, fetchJadwal, fetchKegiatanMitra, fetchKegiatanWilayah, fetchRealisasi } from '@/lib/db'
+import type { Kegiatan, JadwalKegiatan, KegiatanMitra, KegiatanWilayah, RealisasiKegiatan } from '@/types'
 
 import { formatTanggalPendek } from '@/lib/utils'
 import { jalurPrioritas } from '@/lib/master-program'
+import { menurutInduk } from '@/lib/urutkan'
 import { toast } from 'sonner'
 import { BadgePeringatan } from '@/components/badge-status'
 
@@ -29,31 +31,31 @@ function formatRupiah(n: number) {
 
 export default function KegiatanListPage() {
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra, wilayah: daftarWilayah } = useData()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filterPokja, setFilterPokja] = useState<string>(
-    user?.role === 'operator' && user.pokja_id ? String(user.pokja_id) : 'all'
+    pokjaTerikat(user) !== null ? String(pokjaTerikat(user)) : 'all'
   )
   const [filterTahun, setFilterTahun] = useState(String(new Date().getFullYear()))
   const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
   const [allJadwal, setAllJadwal] = useState<JadwalKegiatan[]>([])
   const [kaitanMitra, setKaitanMitra] = useState<KegiatanMitra[]>([])
   const [realisasi, setRealisasi] = useState<RealisasiKegiatan[]>([])
+  const [kaitanWilayah, setKaitanWilayah] = useState<KegiatanWilayah[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
+    const terikat = pokjaTerikat(user)
+    const opts = terikat !== null ? { pokjaId: terikat } : {}
     // Realisasi hanya dipakai untuk tahu kegiatan mana yang belum tersentuh,
     // bukan untuk ditampilkan; yang dibaca cuma ada-tidaknya barisnya.
-    Promise.all([fetchKegiatan(opts), fetchJadwal({}), fetchKegiatanMitra(), fetchRealisasi({})])
-      .then(([k, j, m, r]) => { setAllKegiatan(k); setAllJadwal(j); setKaitanMitra(m); setRealisasi(r) })
+    Promise.all([fetchKegiatan(opts), fetchJadwal({}), fetchKegiatanMitra(), fetchRealisasi({}), fetchKegiatanWilayah()])
+      .then(([k, j, m, r, w]) => { setAllKegiatan(k); setAllJadwal(j); setKaitanMitra(m); setRealisasi(r); setKaitanWilayah(w) })
       .finally(() => setIsLoading(false))
   }, [user])
 
-  const pokjaForFilter = user?.role === 'operator' && user.pokja_id
-    ? pokjaList.filter(p => p.id === user.pokja_id)
-    : pokjaList
+  const pokjaForFilter = saringPokja(user, pokjaList)
 
   const data = useMemo(() => {
     return allKegiatan
@@ -69,13 +71,17 @@ export default function KegiatanListPage() {
         const jalur = jalurPrioritas(k.program_prioritas_id, {
           pokja: pokjaList, programPokok, programUnggulan, programPrioritas,
         })
-        const namaMitra = kaitanMitra
-          .filter(km => km.kegiatan_id === k.id)
-          .map(km => {
-            const m = daftarMitra.find(x => x.id === km.mitra_id)
-            return m ? (m.singkatan || m.nama) : null
-          })
-          .filter((n): n is string => n !== null)
+        const namaLokus = menurutInduk(
+          daftarWilayah,
+          kaitanWilayah.filter(kw => kw.kegiatan_id === k.id).map(kw => kw.wilayah_id),
+        )
+          // "Kabupaten Kutai Kartanegara" terlalu panjang untuk sel tabel;
+          // awalannya dibuang karena jenisnya sudah jelas dari namanya.
+          .map(w => w.nama.replace(/^(Kabupaten|Kota)\s+/, ''))
+        const namaMitra = menurutInduk(
+          daftarMitra,
+          kaitanMitra.filter(km => km.kegiatan_id === k.id).map(km => km.mitra_id),
+        ).map(m => m.singkatan || m.nama)
         // "Belum ada realisasi" berarti belum satu pun sesi dilaporkan.
         // Kegiatan yang sudah punya satu laporan turun ke urutan biasa —
         // penandanya berarti "belum tersentuh", bukan "belum selesai".
@@ -90,6 +96,7 @@ export default function KegiatanListPage() {
           prioritasName: jalur?.prioritas.name ?? null,
           belumDipetakan: k.program_prioritas_id === null,
           mitraNames: namaMitra,
+          lokusNames: namaLokus,
           jadwal: allJadwal.filter(j => j.kegiatan_id === k.id).map(j => formatTanggalPendek(j.tanggal)).join(', '),
         }
       })
@@ -97,7 +104,7 @@ export default function KegiatanListPage() {
       // seperti sebelumnya. sort() mengubah array di tempat, tapi array ini
       // baru dibuat oleh map() di atas jadi tidak ada yang ikut berubah.
       .sort((a, b) => Number(b.disorot) - Number(a.disorot) || a.id - b.id)
-  }, [allKegiatan, allJadwal, kaitanMitra, daftarMitra, realisasi, filterPokja, filterTahun, search,
+  }, [allKegiatan, allJadwal, kaitanMitra, daftarMitra, kaitanWilayah, daftarWilayah, realisasi, filterPokja, filterTahun, search,
       pokjaList, programPokok, programUnggulan, programPrioritas])
 
   // Pemisah hanya ditampilkan kalau kedua kelompok memang berisi. Judul
@@ -118,7 +125,7 @@ export default function KegiatanListPage() {
     }
   }
 
-  const canEdit = user?.role === 'super_admin' || user?.role === 'operator'
+  const canEdit = bolehKelolaKegiatan(user)
 
   if (isLoading) {
     return <div className="py-20 text-center text-gray-400">Memuat data kegiatan...</div>
@@ -155,7 +162,7 @@ export default function KegiatanListPage() {
             <SelectItem value="2025">2025</SelectItem>
           </SelectContent>
         </Select>
-        {user?.role !== 'operator' && (
+        {pokjaTerikat(user) === null && (
           <Select items={pokjaItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
             <SelectTrigger className="w-40 border-pkk-border"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>
@@ -181,6 +188,7 @@ export default function KegiatanListPage() {
                 <TableHead className="text-white hidden 2xl:table-cell">Program Unggulan</TableHead>
                 <TableHead className="text-white hidden 2xl:table-cell">Program Prioritas</TableHead>
                 <TableHead className="text-white">Nama Kegiatan</TableHead>
+                <TableHead className="text-white hidden 2xl:table-cell">Lokus</TableHead>
                 <TableHead className="text-white hidden xl:table-cell">Mitra / OPD</TableHead>
                 <TableHead className="text-white hidden 2xl:table-cell">Sasaran</TableHead>
                 <TableHead className="text-white hidden lg:table-cell">Jadwal</TableHead>
@@ -193,7 +201,7 @@ export default function KegiatanListPage() {
                 <Fragment key={k.id}>
                   {pakaiPemisah && idx === 0 && (
                     <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={11} className="bg-pkk-tint/60 px-4 py-1.5 text-xs font-medium text-pkk">
+                      <TableCell colSpan={12} className="bg-pkk-tint/60 px-4 py-1.5 text-xs font-medium text-pkk">
                         <span className="flex items-center gap-1.5">
                           <Star className="h-3.5 w-3.5 fill-pkk text-pkk" />
                           Isu strategis, belum ada realisasi
@@ -203,7 +211,7 @@ export default function KegiatanListPage() {
                   )}
                   {pakaiPemisah && idx === jumlahDisorot && (
                     <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={11} className="bg-gray-50 px-4 py-1.5 text-xs font-medium text-gray-500">
+                      <TableCell colSpan={12} className="bg-gray-50 px-4 py-1.5 text-xs font-medium text-gray-500">
                         Kegiatan lainnya
                       </TableCell>
                     </TableRow>
@@ -244,6 +252,17 @@ export default function KegiatanListPage() {
                         Belum dipetakan
                       </BadgePeringatan>
                     )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 hidden 2xl:table-cell max-w-40">
+                    {k.lokusNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {k.lokusNames.map(n => (
+                          <Badge key={n} variant="outline" className="border-pkk-border text-pkk text-[11px] font-normal">
+                            {n}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : <span className="text-gray-300 text-xs">—</span>}
                   </TableCell>
                   <TableCell className="px-4 py-3 hidden xl:table-cell max-w-40">
                     {k.mitraNames.length > 0 ? (

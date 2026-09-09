@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/auth-context'
+import { pokjaTerikat, saringPokja } from '@/lib/hak-akses'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
@@ -20,7 +21,7 @@ export default function LaporanPage() {
   const { pokja: pokjaList, programPokok } = useData()
   const [filterTahun, setFilterTahun] = useState(String(new Date().getFullYear()))
   const [filterPokja, setFilterPokja] = useState<string>(
-    user?.role === 'operator' && user.pokja_id ? String(user.pokja_id) : 'all'
+    pokjaTerikat(user) !== null ? String(pokjaTerikat(user)) : 'all'
   )
   const [filterBulan, setFilterBulan] = useState('all')
   const [allKegiatan, setAllKegiatan] = useState<Kegiatan[]>([])
@@ -29,7 +30,8 @@ export default function LaporanPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const opts = user?.role === 'operator' && user.pokja_id ? { pokjaId: user.pokja_id } : {}
+    const terikat = pokjaTerikat(user)
+    const opts = terikat !== null ? { pokjaId: terikat } : {}
     Promise.all([
       fetchKegiatan(opts),
       fetchRealisasi({ tahun: parseInt(filterTahun) }),
@@ -39,9 +41,7 @@ export default function LaporanPage() {
       .finally(() => setIsLoading(false))
   }, [user, filterTahun])
 
-  const pokjaListFiltered = user?.role === 'operator' && user.pokja_id
-    ? pokjaList.filter(p => p.id === user.pokja_id)
-    : pokjaList
+  const pokjaListFiltered = saringPokja(user, pokjaList)
 
   const kegiatan = useMemo(() => {
     return allKegiatan.filter(k => {
@@ -136,7 +136,7 @@ export default function LaporanPage() {
             <SelectItem value="2025">2025</SelectItem>
           </SelectContent>
         </Select>
-        {user?.role !== 'operator' && (
+        {pokjaTerikat(user) === null && (
           <Select items={pokjaItems} value={filterPokja} onValueChange={v => v && setFilterPokja(v)}>
             <SelectTrigger className="w-40 border-pkk-border"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
             <SelectContent>

@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react'
-import type { Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, Mitra } from '@/types'
-import { fetchPokja, fetchProgramPokok, fetchProgramUnggulan, fetchProgramPrioritas, fetchMitra } from '@/lib/db'
+import type { Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, Mitra, Wilayah } from '@/types'
+import { fetchPokja, fetchProgramPokok, fetchProgramUnggulan, fetchProgramPrioritas, fetchMitra, fetchWilayah } from '@/lib/db'
 import { useAuth } from '@/contexts/auth-context'
 import { DataContext } from '@/contexts/data-context'
 
@@ -14,6 +14,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     programUnggulan: ProgramUnggulan[]
     programPrioritas: ProgramPrioritas[]
     mitra: Mitra[]
+    wilayah: Wilayah[]
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
@@ -30,10 +31,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchProgramUnggulan(),
       fetchProgramPrioritas(),
       fetchMitra(),
+      fetchWilayah(),
     ])
-      .then(([p, pp, pu, ppr, m]) => {
+      .then(([p, pp, pu, ppr, m, w]) => {
         if (dibatalkan) return
-        setData({ pokja: p, programPokok: pp, programUnggulan: pu, programPrioritas: ppr, mitra: m })
+        setData({ pokja: p, programPokok: pp, programUnggulan: pu, programPrioritas: ppr, mitra: m, wilayah: w })
         setError(null)
       })
       .catch((err: unknown) => {
@@ -41,7 +43,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // aplikasi menggantung di "Memuat…" atau, lebih buruk, tiap halaman
         // tampil kosong seolah-olah datanya memang tidak ada.
         if (dibatalkan) return
-        setData({ pokja: [], programPokok: [], programUnggulan: [], programPrioritas: [], mitra: [] })
+        setData({ pokja: [], programPokok: [], programUnggulan: [], programPrioritas: [], mitra: [], wilayah: [] })
         setError(err instanceof Error ? err.message : 'Gagal memuat master data.')
       })
     return () => { dibatalkan = true }
@@ -60,6 +62,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         programUnggulan: data?.programUnggulan ?? [],
         programPrioritas: data?.programPrioritas ?? [],
         mitra: data?.mitra ?? [],
+        wilayah: data?.wilayah ?? [],
         isLoading,
         error,
         reload,

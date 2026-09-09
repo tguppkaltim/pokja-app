@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, Mitra } from '@/types'
+import type { Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, Mitra, Wilayah } from '@/types'
 
 // Dipisahkan dari DataProvider: fast refresh React berhenti bekerja untuk
 // seluruh berkas kalau ada ekspor non-komponen di dalamnya.
@@ -9,6 +9,7 @@ export interface DataContextValue {
   programUnggulan: ProgramUnggulan[]
   programPrioritas: ProgramPrioritas[]
   mitra: Mitra[]
+  wilayah: Wilayah[]
   isLoading: boolean
   /** Pesan galat saat memuat master data; null bila sehat. */
   error: string | null
@@ -21,6 +22,7 @@ export const DataContext = createContext<DataContextValue>({
   programUnggulan: [],
   programPrioritas: [],
   mitra: [],
+  wilayah: [],
   isLoading: true,
   error: null,
   reload: () => {},

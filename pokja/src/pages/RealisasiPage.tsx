@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Save, Upload, X, FileText, ImageIcon, Pencil } from 'lucide-react'
+import { Save, Upload, X, FileText, ImageIcon, Pencil, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/auth-context'
+import { pokjaTerikat } from '@/lib/hak-akses'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, upsertRealisasi, uploadEvidence, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
@@ -53,6 +54,7 @@ export default function RealisasiPage() {
   const [tanggal, setTanggal] = useState<Date | undefined>(undefined)
   const [status, setStatus] = useState('')
   const [catatan, setCatatan] = useState('')
+  const [lokasi, setLokasi] = useState('')
   const [anggaranAktual, setAnggaranAktual] = useState('')
   const [sedangSeret, setSedangSeret] = useState(false)
   const [files, setFiles] = useState<File[]>([])
@@ -60,9 +62,8 @@ export default function RealisasiPage() {
   const [isDataLoading, setIsDataLoading] = useState(true)
 
   useEffect(() => {
-    const opts = user?.role === 'operator' && user.pokja_id
-      ? { pokjaId: user.pokja_id, tahun: CURRENT_YEAR }
-      : { tahun: CURRENT_YEAR }
+    const terikat = pokjaTerikat(user)
+    const opts = terikat !== null ? { pokjaId: terikat, tahun: CURRENT_YEAR } : { tahun: CURRENT_YEAR }
     fetchKegiatan(opts).then(setKegiatanList).finally(() => setIsDataLoading(false))
   }, [user])
 
@@ -180,6 +181,7 @@ export default function RealisasiPage() {
     setSelectedJadwal(String(r.jadwal_id))
     setStatus(r.status)
     setCatatan(r.catatan)
+    setLokasi(r.lokasi)
     setAnggaranAktual(String(r.anggaran_aktual))
     setTanggal(r.tanggal_pelaksanaan ? dariTanggalLokal(r.tanggal_pelaksanaan) : undefined)
     setFiles([])
@@ -191,6 +193,7 @@ export default function RealisasiPage() {
     setSelectedJadwal('')
     setStatus('')
     setCatatan('')
+    setLokasi('')
     setAnggaranAktual('')
     setTanggal(undefined)
     setFiles([])
@@ -229,6 +232,7 @@ export default function RealisasiPage() {
         status: status as 'terlaksana' | 'tidak_terlaksana',
         tanggal_pelaksanaan: toTanggalLokal(tanggal),
         catatan,
+        lokasi: lokasi.trim(),
         anggaran_aktual: nominalAktual,
         created_by: user.id,
       })
@@ -243,6 +247,7 @@ export default function RealisasiPage() {
       setStatus('')
       setTanggal(undefined)
       setCatatan('')
+      setLokasi('')
       setAnggaranAktual('')
       setFiles([])
       const updated = await fetchRealisasi({ kegiatanId: parseInt(selectedKegiatan), tahun: CURRENT_YEAR })
@@ -383,6 +388,19 @@ export default function RealisasiPage() {
                 )}
 
                 <div className="space-y-1.5">
+                  <Label>Lokasi Kegiatan</Label>
+                  <Input
+                    placeholder="mis: Balai Desa Sukamaju, Kutai Kartanegara"
+                    value={lokasi}
+                    onChange={e => setLokasi(e.target.value)}
+                    className="border-pkk-border"
+                  />
+                  <p className="text-xs text-gray-400">
+                    Tempat pelaksanaan sebenarnya. Opsional, dan boleh berbeda dari lokus yang direncanakan.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
                   <Label>Catatan Pelaksanaan</Label>
                   <Textarea placeholder="Deskripsikan hasil pelaksanaan, kendala, atau hal penting lainnya..." value={catatan} onChange={e => setCatatan(e.target.value)} className="border-pkk-border min-h-24" />
                 </div>
@@ -488,6 +506,12 @@ export default function RealisasiPage() {
                   {r.status === 'terlaksana' && (
                     <p className="text-xs text-gray-500 mt-1">
                       Anggaran aktual: <span className="font-medium text-pkk">{formatRupiah(r.anggaran_aktual)}</span>
+                    </p>
+                  )}
+                  {r.lokasi && (
+                    <p className="mt-1 flex items-start gap-1 text-xs text-gray-500">
+                      <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-pkk-accent" />
+                      <span>{r.lokasi}</span>
                     </p>
                   )}
                   {r.catatan && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{r.catatan}</p>}

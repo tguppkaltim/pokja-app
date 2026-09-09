@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress'
 import { KartuKPI } from '@/components/kartu-kpi'
 import { BadgeStatus } from '@/components/badge-status'
 import { useAuth } from '@/contexts/auth-context'
+import { bolehKelolaKegiatan, pokjaTerikat, saringPokja } from '@/lib/hak-akses'
 import { useData } from '@/contexts/data-context'
 import { fetchKegiatan, fetchRealisasi, fetchJadwal } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, JadwalKegiatan } from '@/types'
@@ -67,9 +68,8 @@ export default function DashboardPage() {
   const batasTerlambat = Math.min(sampai, bulanSudahLewat)
 
   useEffect(() => {
-    const opts = user?.role === 'operator' && user.pokja_id
-      ? { pokjaId: user.pokja_id, tahun }
-      : { tahun }
+    const terikat = pokjaTerikat(user)
+    const opts = terikat !== null ? { pokjaId: terikat, tahun } : { tahun }
     Promise.all([fetchKegiatan(opts), fetchRealisasi({ tahun }), fetchJadwal({ tahun })])
       .then(([k, r, j]) => { setKegiatan(k); setRealisasi(r); setJadwal(j) })
       .finally(() => setIsLoading(false))
@@ -86,9 +86,7 @@ export default function DashboardPage() {
   // Pokja yang muncul di grafik & tabel serapan: dibatasi pokja milik operator,
   // lalu dipersempit lagi oleh filter Pokja.
   const pokjaTampil = useMemo(() => {
-    const base = user?.role === 'operator' && user.pokja_id
-      ? pokjaList.filter(p => p.id === user.pokja_id)
-      : pokjaList
+    const base = saringPokja(user, pokjaList)
     return filterPokja === 'all' ? base : base.filter(p => p.id === parseInt(filterPokja))
   }, [pokjaList, user, filterPokja])
 
@@ -169,7 +167,7 @@ export default function DashboardPage() {
   // Dihitung dari kegiatan dalam lingkup filter agar angkanya konsisten dengan
   // sisa halaman. Viewer tidak bisa menindaklanjuti, jadi tidak perlu diberi tahu.
   const belumDipetakan = scopedKegiatan.filter(k => k.program_prioritas_id === null).length
-  const bolehMemetakan = user?.role === 'super_admin' || user?.role === 'operator'
+  const bolehMemetakan = bolehKelolaKegiatan(user)
 
   const tableData = scopedKegiatan.map(k => {
     const prog = programPokok.find(p => p.id === k.program_pokok_id)
@@ -192,9 +190,7 @@ export default function DashboardPage() {
     }
   })
 
-  const pokjaForFilter = user?.role === 'operator' && user.pokja_id
-    ? pokjaList.filter(p => p.id === user.pokja_id)
-    : pokjaList
+  const pokjaForFilter = saringPokja(user, pokjaList)
 
   // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentah.
   const pokjaFilterItems = [{ value: 'all', label: 'Semua Pokja' }, ...pokjaForFilter.map(p => ({ value: String(p.id), label: p.name }))]
@@ -263,7 +259,7 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
           </div>
-          {user?.role !== 'operator' && (
+          {pokjaTerikat(user) === null && (
             <Select items={pokjaFilterItems} value={filterPokja} onValueChange={v => v && gantiPokja(v)}>
               <SelectTrigger className="w-40 border-pkk-border text-sm"><SelectValue placeholder="Filter Pokja" /></SelectTrigger>
               <SelectContent>

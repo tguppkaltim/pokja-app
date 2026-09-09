@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   // Sekretariat bukan pokja, jadi hanya membaca Rencana Kegiatan — tombol ubah
   // di halaman itu memang sudah dibatasi super_admin dan operator.
   { label: 'Rencana Kegiatan', path: '/kegiatan', icon: ClipboardList, roles: ['super_admin', 'sekretariat', 'operator'] },
-  { label: 'Input Realisasi', path: '/realisasi', icon: CheckSquare, roles: ['super_admin', 'operator'] },
+  { label: 'Input Realisasi', path: '/realisasi', icon: CheckSquare, roles: ['super_admin', 'sekretariat', 'operator'] },
   { label: 'Notulensi', path: '/notulensi', icon: NotebookPen, roles: ['super_admin', 'sekretariat', 'operator', 'viewer'] },
   { label: 'Laporan', path: '/laporan', icon: FileBarChart, roles: ['super_admin', 'sekretariat', 'operator', 'viewer'] },
 ]

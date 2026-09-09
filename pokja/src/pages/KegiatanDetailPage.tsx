@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, Handshake, Star } from 'lucide-react'
+import { ArrowLeft, Pencil, Calendar, User, DollarSign, Building2, FileText, Handshake, Star, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
@@ -8,10 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn, formatTanggalPanjang } from '@/lib/utils'
 import { jalurPrioritas } from '@/lib/master-program'
+import { menurutInduk } from '@/lib/urutkan'
 import { BadgeStatus, BadgePeringatan } from '@/components/badge-status'
 import { useAuth } from '@/contexts/auth-context'
+import { bolehKelolaPokja } from '@/lib/hak-akses'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal, fetchKegiatanMitra } from '@/lib/db'
+import { fetchKegiatanById, fetchRealisasi, fetchEvidence, fetchJadwal, fetchKegiatanMitra, fetchKegiatanWilayah } from '@/lib/db'
 import type { Kegiatan, RealisasiKegiatan, EvidenceFile, JadwalKegiatan } from '@/types'
 import { BULAN_FULL } from '@/lib/kalender'
 
@@ -23,9 +25,10 @@ export default function KegiatanDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra, wilayah: daftarWilayah } = useData()
   const [kegiatan, setKegiatan] = useState<Kegiatan | null>(null)
   const [mitraKegiatan, setMitraKegiatan] = useState<number[]>([])
+  const [wilayahKegiatan, setWilayahKegiatan] = useState<number[]>([])
   const [realisasiList, setRealisasiList] = useState<RealisasiKegiatan[]>([])
   const [jadwalList, setJadwalList] = useState<JadwalKegiatan[]>([])
   const [evidenceMap, setEvidenceMap] = useState<Record<number, EvidenceFile[]>>({})
@@ -39,10 +42,12 @@ export default function KegiatanDetailPage() {
       fetchRealisasi({ kegiatanId: kegId }),
       fetchJadwal({ kegiatanId: kegId }),
       fetchKegiatanMitra([kegId]),
-    ]).then(async ([k, realisasi, jadwal, kaitan]) => {
+      fetchKegiatanWilayah([kegId]),
+    ]).then(async ([k, realisasi, jadwal, kaitan, lokus]) => {
       setKegiatan(k)
       setJadwalList(jadwal)
       setMitraKegiatan(kaitan.map(m => m.mitra_id))
+      setWilayahKegiatan(lokus.map(w => w.wilayah_id))
       setRealisasiList(realisasi.sort((a, b) => a.bulan - b.bulan))
       const evMap: Record<number, EvidenceFile[]> = {}
       await Promise.all(realisasi.map(async r => {
@@ -75,7 +80,7 @@ export default function KegiatanDetailPage() {
     .reduce((sum, r) => sum + r.anggaran_aktual, 0)
   // null bila kegiatan tidak punya rencana anggaran — serapannya tak terdefinisi.
   const pctSerapan = kegiatan.anggaran > 0 ? Math.round((anggaranAktual / kegiatan.anggaran) * 100) : null
-  const canEdit = user?.role === 'super_admin' || (user?.role === 'operator' && user.pokja_id === kegiatan.pokja_id)
+  const canEdit = bolehKelolaPokja(user, kegiatan.pokja_id)
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -132,19 +137,31 @@ export default function KegiatanDetailPage() {
               <div><p className="text-gray-400 text-xs">Pelaksana</p><p className="text-gray-700">{kegiatan.pelaksana || '-'}</p></div>
             </div>
             <div className="flex items-start gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-gray-400 text-xs">Lokus</p>
+                {wilayahKegiatan.length > 0 ? (
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {menurutInduk(daftarWilayah, wilayahKegiatan).map(w => (
+                      <Badge key={w.id} variant="outline" className="border-pkk-border text-pkk text-xs font-normal">
+                        {w.nama}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : <p className="text-gray-700">-</p>}
+              </div>
+            </div>
+            <div className="flex items-start gap-2 text-sm">
               <Handshake className="w-4 h-4 text-pkk-accent mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <p className="text-gray-400 text-xs">Mitra / OPD</p>
                 {mitraKegiatan.length > 0 ? (
                   <div className="mt-0.5 flex flex-wrap gap-1">
-                    {mitraKegiatan.map(mid => {
-                      const m = daftarMitra.find(x => x.id === mid)
-                      return (
-                        <Badge key={mid} variant="outline" className="border-pkk-border text-pkk text-xs font-normal">
-                          {m?.nama ?? `Mitra #${mid}`}
-                        </Badge>
-                      )
-                    })}
+                    {menurutInduk(daftarMitra, mitraKegiatan).map(m => (
+                      <Badge key={m.id} variant="outline" className="border-pkk-border text-pkk text-xs font-normal">
+                        {m.nama}
+                      </Badge>
+                    ))}
                   </div>
                 ) : <p className="text-gray-700">-</p>}
               </div>
@@ -243,6 +260,12 @@ export default function KegiatanDetailPage() {
                     {r.status === 'terlaksana' && (
                       <p className="text-xs text-gray-500">
                         Anggaran aktual: <span className="font-medium text-pkk">{formatRupiah(r.anggaran_aktual)}</span>
+                      </p>
+                    )}
+                    {r.lokasi && (
+                      <p className="flex items-start gap-1 text-xs text-gray-500">
+                        <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-pkk-accent" />
+                        <span>{r.lokasi}</span>
                       </p>
                     )}
                     {r.catatan && <p className="text-sm text-gray-600 bg-pkk-surface rounded px-3 py-2">{r.catatan}</p>}

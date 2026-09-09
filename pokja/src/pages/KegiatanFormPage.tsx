@@ -12,11 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/auth-context'
+import { pokjaTerikat, saringPokja } from '@/lib/hak-akses'
 import { useData } from '@/contexts/data-context'
-import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan, fetchKegiatanMitra, setMitraKegiatan } from '@/lib/db'
+import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadwalKegiatan, fetchKegiatanMitra, setMitraKegiatan, fetchKegiatanWilayah, setWilayahKegiatan } from '@/lib/db'
 import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { prioritasPerPokja } from '@/lib/master-program'
-import { PilihMitra } from '@/components/pilih-mitra'
+import { PilihBanyak } from '@/components/pilih-banyak'
 import { toast } from 'sonner'
 
 
@@ -32,11 +33,12 @@ const emptyForm = {
   anggaran: '',
   jadwal: [] as string[], // YYYY-MM-DD
   mitra: [] as number[],
+  wilayah: [] as number[],
 }
 
 export default function KegiatanFormPage() {
   const { user } = useAuth()
-  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra } = useData()
+  const { pokja: pokjaList, programPokok, programUnggulan, programPrioritas, mitra: daftarMitra, wilayah: daftarWilayah } = useData()
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
@@ -51,7 +53,8 @@ export default function KegiatanFormPage() {
         fetchKegiatanById(parseInt(id)),
         fetchJadwal({ kegiatanId: parseInt(id) }),
         fetchKegiatanMitra([parseInt(id)]),
-      ]).then(([existing, jadwalRows, mitraRows]) => {
+        fetchKegiatanWilayah([parseInt(id)]),
+      ]).then(([existing, jadwalRows, mitraRows, wilayahRows]) => {
         if (existing) {
           const jadwal = jadwalRows.map(j => j.tanggal)
           setForm({
@@ -66,6 +69,7 @@ export default function KegiatanFormPage() {
             anggaran: String(existing.anggaran),
             jadwal,
             mitra: mitraRows.map(m => m.mitra_id),
+            wilayah: wilayahRows.map(w => w.wilayah_id),
           })
         }
       }).finally(() => setIsLoading(false))
@@ -75,13 +79,12 @@ export default function KegiatanFormPage() {
   // Operator terkunci ke pokjanya sendiri. Diturunkan, bukan disalin ke state
   // lewat efek: menyalinnya berarti setState sinkron di badan efek, dan nilainya
   // bisa tertinggal saat user berubah.
-  const pokjaTerkunci = user?.role === 'operator' && user.pokja_id ? String(user.pokja_id) : ''
+  const terikat = pokjaTerikat(user)
+  const pokjaTerkunci = terikat !== null ? String(terikat) : ''
   const pokjaAktif = form.pokja_id || pokjaTerkunci
 
   const filteredProgram = programPokok.filter(p => pokjaAktif ? p.pokja_id === parseInt(pokjaAktif) : true)
-  const pokjaOptions = user?.role === 'operator' && user.pokja_id
-    ? pokjaList.filter(p => p.id === user.pokja_id)
-    : pokjaList
+  const pokjaOptions = saringPokja(user, pokjaList)
 
   // Base UI menampilkan nilai mentah di trigger kalau `items` tidak dikirim ke
   // Select.Root, sehingga yang tampil id-nya (angka) dan bukan namanya.
@@ -153,11 +156,13 @@ export default function KegiatanFormPage() {
         await updateKegiatan(parseInt(id), payload)
         await setJadwalKegiatan(parseInt(id), form.jadwal)
         await setMitraKegiatan(parseInt(id), form.mitra)
+        await setWilayahKegiatan(parseInt(id), form.wilayah)
         toast.success('Kegiatan berhasil diperbarui.')
       } else {
         const dibuat = await createKegiatan(payload as Parameters<typeof createKegiatan>[0])
         await setJadwalKegiatan(dibuat.id, form.jadwal)
         await setMitraKegiatan(dibuat.id, form.mitra)
+        await setWilayahKegiatan(dibuat.id, form.wilayah)
         toast.success('Kegiatan berhasil ditambahkan.')
       }
       navigate('/kegiatan')
@@ -193,7 +198,7 @@ export default function KegiatanFormPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Pokja <span className="text-red-500">*</span></Label>
-                <Select items={pokjaItems} value={pokjaAktif} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '', program_prioritas_id: '' }))} disabled={user?.role === 'operator'}>
+                <Select items={pokjaItems} value={pokjaAktif} onValueChange={v => v && setForm(prev => ({ ...prev, pokja_id: v, program_pokok_id: '', program_prioritas_id: '' }))} disabled={terikat !== null}>
                   <SelectTrigger className="border-pkk-border"><SelectValue placeholder="Pilih Pokja" /></SelectTrigger>
                   <SelectContent>
                     {pokjaItems.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
@@ -302,11 +307,31 @@ export default function KegiatanFormPage() {
             </div>
 
             <div className="space-y-1.5">
+              <Label>Lokus</Label>
+              <PilihBanyak
+                opsi={daftarWilayah.map(w => ({ id: w.id, label: w.nama }))}
+                terpilih={form.wilayah}
+                onChange={wilayah => setForm(prev => ({ ...prev, wilayah }))}
+                placeholder="Pilih kabupaten/kota..."
+                placeholderHabis="Semua wilayah sudah dipilih"
+                pesanKosong="Daftar wilayah belum terisi. Jalankan migrasi 019 lebih dulu."
+                pesanBelumDipilih="Belum ada wilayah sasaran dipilih. Boleh dikosongkan."
+              />
+              <p className="text-xs text-gray-400">
+                Wilayah sasaran yang direncanakan. Tempat pelaksanaan sebenarnya diisi saat melapor realisasi.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Mitra / OPD</Label>
-              <PilihMitra
-                daftarMitra={daftarMitra}
+              <PilihBanyak
+                opsi={daftarMitra.map(m => ({ id: m.id, label: m.nama, nonaktif: !m.aktif }))}
                 terpilih={form.mitra}
                 onChange={mitra => setForm(prev => ({ ...prev, mitra }))}
+                placeholder="Pilih mitra/OPD..."
+                placeholderHabis="Semua mitra aktif sudah dipilih"
+                pesanKosong="Daftar mitra masih kosong. Isi lebih dulu lewat Administrasi › Master Mitra."
+                pesanBelumDipilih="Belum ada mitra dipilih. Boleh dikosongkan."
               />
             </div>
 

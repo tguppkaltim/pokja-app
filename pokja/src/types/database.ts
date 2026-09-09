@@ -144,6 +144,45 @@ export interface Database {
         }
         Relationships: []
       }
+      wilayah: {
+        Row: {
+          id: number
+          nama: string
+          jenis: 'kabupaten' | 'kota'
+          urutan: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          nama: string
+          jenis: 'kabupaten' | 'kota'
+          urutan?: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          nama?: string
+          jenis?: 'kabupaten' | 'kota'
+          urutan?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      kegiatan_wilayah: {
+        Row: {
+          kegiatan_id: number
+          wilayah_id: number
+        }
+        Insert: {
+          kegiatan_id: number
+          wilayah_id: number
+        }
+        Update: {
+          kegiatan_id?: number
+          wilayah_id?: number
+        }
+        Relationships: []
+      }
       mitra: {
         Row: {
           id: number
@@ -263,6 +302,7 @@ export interface Database {
           tanggal_pelaksanaan: string | null
           catatan: string
           anggaran_aktual: number
+          lokasi: string
           created_by: string
           created_at: string
           updated_at: string | null
@@ -277,6 +317,7 @@ export interface Database {
           tanggal_pelaksanaan?: string | null
           catatan?: string
           anggaran_aktual?: number
+          lokasi?: string
           created_by: string
           created_at?: string
           updated_at?: string | null
@@ -291,6 +332,7 @@ export interface Database {
           tanggal_pelaksanaan?: string | null
           catatan?: string
           anggaran_aktual?: number
+          lokasi?: string
           created_by?: string
           created_at?: string
           updated_at?: string | null

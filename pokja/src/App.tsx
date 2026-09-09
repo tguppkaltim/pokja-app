@@ -78,19 +78,19 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/kegiatan/tambah" element={
-          <ProtectedRoute roles={['super_admin', 'operator']}>
+          <ProtectedRoute roles={['super_admin', 'sekretariat', 'operator']}>
             <KegiatanFormPage />
           </ProtectedRoute>
         } />
         <Route path="/kegiatan/:id" element={<KegiatanDetailPage />} />
         <Route path="/kegiatan/:id/edit" element={
-          <ProtectedRoute roles={['super_admin', 'operator']}>
+          <ProtectedRoute roles={['super_admin', 'sekretariat', 'operator']}>
             <KegiatanFormPage />
           </ProtectedRoute>
         } />
 
         <Route path="/realisasi" element={
-          <ProtectedRoute roles={['super_admin', 'operator']}>
+          <ProtectedRoute roles={['super_admin', 'sekretariat', 'operator']}>
             <RealisasiPage />
           </ProtectedRoute>
         } />

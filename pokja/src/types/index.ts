@@ -65,6 +65,20 @@ export interface Mitra {
   created_at: string
 }
 
+export interface Wilayah {
+  id: number
+  nama: string
+  jenis: 'kabupaten' | 'kota'
+  urutan: number
+  created_at: string
+}
+
+/** Lokus: satu baris penghubung kegiatan ↔ wilayah sasaran. */
+export interface KegiatanWilayah {
+  kegiatan_id: number
+  wilayah_id: number
+}
+
 /** Satu baris tabel penghubung kegiatan ↔ mitra. */
 export interface KegiatanMitra {
   kegiatan_id: number
@@ -116,6 +130,8 @@ export interface RealisasiKegiatan {
   catatan: string
   /** Anggaran terpakai pada sesi bulan ini. 0 bila tidak terlaksana. */
   anggaran_aktual: number
+  /** Tempat pelaksanaan sebenarnya. Opsional; kosong berarti belum diisi. */
+  lokasi: string
   created_by: string
   created_at: string
   updated_at: string | null
