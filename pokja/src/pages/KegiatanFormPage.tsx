@@ -326,7 +326,14 @@ export default function KegiatanFormPage() {
             <div className="space-y-1.5">
               <Label>Mitra / OPD</Label>
               <PilihBanyak
-                opsi={daftarMitra.map(m => ({ id: m.id, label: labelMitra(m), nonaktif: !m.aktif }))}
+                opsi={daftarMitra.map(m => ({
+                  id: m.id,
+                  label: labelMitra(m),
+                  // Nama resminya ikut dicari: yang menyusun kegiatan biasanya
+                  // menyalin dari surat, yang memakai nama panjang.
+                  cari: m.nama,
+                  nonaktif: !m.aktif,
+                }))}
                 terpilih={form.mitra}
                 onChange={mitra => setForm(prev => ({ ...prev, mitra }))}
                 placeholder="Pilih mitra/OPD..."

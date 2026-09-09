@@ -29,11 +29,22 @@ import { ChevronDownIcon, CheckIcon, SearchIcon } from "lucide-react"
 interface Opsi {
   value: string
   label: string
+  /**
+   * Kata lain yang ikut dicari selain label, mis. nama resmi di balik sebuah
+   * singkatan. Tidak ditampilkan.
+   *
+   * Ada karena label yang pendek justru menyembunyikan kata yang diingat
+   * orang: "Diskominfo Kaltim" tidak memuat sepotong pun dari "Dinas
+   * Komunikasi dan Informatika", padahal itu yang tertulis di surat.
+   */
+  cari?: string
 }
 
 interface KonteksSelect {
   /** Label untuk sebuah nilai; jatuh ke nilainya sendiri kalau tak ada di `items`. */
   labelUntuk: (value: string) => string
+  /** Seluruh kata yang boleh mencocokkan sebuah nilai: labelnya, plus `cari`. */
+  kataCari: (value: string) => string
   kueri: string
   setKueri: (kueri: string) => void
 }
@@ -63,9 +74,18 @@ function Select({
     [items],
   )
 
+  const kataCari = React.useCallback(
+    (value: string) => {
+      const opsi = items?.find(i => i.value === value)
+      if (!opsi) return String(value ?? "")
+      return opsi.cari ? `${opsi.label} ${opsi.cari}` : opsi.label
+    },
+    [items],
+  )
+
   const konteks = React.useMemo<KonteksSelect>(
-    () => ({ labelUntuk, kueri, setKueri }),
-    [labelUntuk, kueri],
+    () => ({ labelUntuk, kataCari, kueri, setKueri }),
+    [labelUntuk, kataCari, kueri],
   )
 
   return (
@@ -167,7 +187,7 @@ function SelectContent({
   Pick<Combobox.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
     alignItemWithTrigger?: boolean
   }) {
-  const { kueri, labelUntuk } = useSelectContext("SelectContent")
+  const { kueri, kataCari } = useSelectContext("SelectContent")
 
   const dicari = kueri.trim().toLowerCase()
   const semuaAnak = React.Children.toArray(children)
@@ -182,7 +202,7 @@ function SelectContent({
           const value = anak.props.value
           // Anak yang bukan pilihan (pemisah, label) dibiarkan lewat.
           if (typeof value !== "string") return true
-          return labelUntuk(value).toLowerCase().includes(dicari)
+          return kataCari(value).toLowerCase().includes(dicari)
         })
 
   return (

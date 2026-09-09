@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export interface OpsiPilihan {
   id: number
   label: string
+  /** Kata lain yang ikut dicari selain label; tidak ditampilkan. */
+  cari?: string
   /** Tidak ditawarkan lagi, tapi tetap tampil kalau sudah terlanjur dipilih. */
   nonaktif?: boolean
 }
@@ -51,7 +53,7 @@ export function PilihBanyak({
   // Yang nonaktif tidak ditawarkan lagi, tapi yang sudah terlanjur dipilih
   // tetap ditampilkan: data lama harus tetap menyebut apa yang dulu dipilih.
   const bisaDipilih = opsi.filter(o => !o.nonaktif && !terpilih.includes(o.id))
-  const items = bisaDipilih.map(o => ({ value: String(o.id), label: o.label }))
+  const items = bisaDipilih.map(o => ({ value: String(o.id), label: o.label, cari: o.cari }))
 
   // Chip mengikuti urutan daftar induk, bukan urutan pemilihan: satu kegiatan
   // harus tampil sama di form, tabel, dan halaman rinci. Nilai yang tidak lagi
