@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, KegiatanMitra, KegiatanWilayah, Mitra, Wilayah, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
+import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, KegiatanMitra, KegiatanWilayah, Mitra, MitraPokja, Wilayah, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 import { formatTanggalPanjang } from '@/lib/utils'
 import { bandingkanPokok } from '@/lib/master-program'
 import { labelMitra } from '@/lib/mitra'
@@ -145,6 +145,42 @@ export async function createMitra(data: MitraBaru): Promise<Mitra> {
 export async function updateMitra(id: number, data: Partial<MitraBaru>): Promise<void> {
   const { error } = await supabase.from('mitra').update(data).eq('id', id)
   if (error) throw error
+}
+
+/** Bidang pokja seluruh mitra. Sedikit barisnya, jadi diambil sekaligus. */
+export async function fetchMitraPokja(): Promise<MitraPokja[]> {
+  const { data, error } = await supabase.from('mitra_pokja').select('*')
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Samakan bidang pokja satu mitra dengan `pokjaBaru`.
+ *
+ * Selisihnya dihitung dulu, seperti setMitraKegiatan dan setWilayahKegiatan.
+ */
+export async function setPokjaMitra(mitraId: number, pokjaBaru: number[]): Promise<void> {
+  const sekarang = (await fetchMitraPokja()).filter(mp => mp.mitra_id === mitraId)
+  const diinginkan = new Set(pokjaBaru)
+  const sudahAda = new Set(sekarang.map(mp => mp.pokja_id))
+
+  const akanDihapus = sekarang.filter(mp => !diinginkan.has(mp.pokja_id)).map(mp => mp.pokja_id)
+  if (akanDihapus.length > 0) {
+    const { error } = await supabase
+      .from('mitra_pokja')
+      .delete()
+      .eq('mitra_id', mitraId)
+      .in('pokja_id', akanDihapus)
+    if (error) throw error
+  }
+
+  const akanDitambah = pokjaBaru.filter(id => !sudahAda.has(id))
+  if (akanDitambah.length > 0) {
+    const { error } = await supabase
+      .from('mitra_pokja')
+      .insert(akanDitambah.map(pokja_id => ({ mitra_id: mitraId, pokja_id })))
+    if (error) throw error
+  }
 }
 
 export async function deleteMitra(id: number): Promise<void> {

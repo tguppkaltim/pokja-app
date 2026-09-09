@@ -86,6 +86,12 @@ export interface KegiatanWilayah {
 }
 
 /** Satu baris tabel penghubung kegiatan ↔ mitra. */
+/** Bidang pokja sebuah mitra: pokja mana yang biasa menggandengnya. */
+export interface MitraPokja {
+  mitra_id: number
+  pokja_id: number
+}
+
 export interface KegiatanMitra {
   kegiatan_id: number
   mitra_id: number

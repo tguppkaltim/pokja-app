@@ -13,13 +13,20 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PilihBanyak } from '@/components/pilih-banyak'
 import { useData } from '@/contexts/data-context'
-import { createMitra, updateMitra, deleteMitra } from '@/lib/db'
+import { createMitra, updateMitra, deleteMitra, setPokjaMitra } from '@/lib/db'
 import { LABEL_KATEGORI_MITRA, TINGKAT_MITRA, labelKategori } from '@/lib/mitra'
+import { menurutInduk } from '@/lib/urutkan'
 import type { Mitra } from '@/types'
 import { toast } from 'sonner'
 
-const formKosong = { nama: '', singkatan: '', kategori: '', tingkat: '', aktif: true }
+const formKosong = { nama: '', singkatan: '', kategori: '', tingkat: '', aktif: true, pokja: [] as number[] }
+
+/** "Pokja III" jadi "III" — kolomnya sempit dan awalannya sama untuk semua. */
+function labelBidang(nama: string) {
+  return nama.replace(/^Pokja\s+/, '')
+}
 
 // Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentahnya.
 const ITEM_KATEGORI = Object.entries(LABEL_KATEGORI_MITRA).map(([value, label]) => ({ value, label }))
@@ -32,7 +39,7 @@ const ITEM_TINGKAT_FORM = [{ value: KOSONG, label: 'Belum ditentukan' }, ...ITEM
 const ITEM_FILTER = [{ value: 'all', label: 'Semua kategori' }, ...ITEM_KATEGORI]
 
 export default function MasterMitraPage() {
-  const { mitra, reload } = useData()
+  const { mitra, mitraPokja, pokja: daftarPokja, reload } = useData()
   const [cari, setCari] = useState('')
   const [filterKategori, setFilterKategori] = useState('all')
   const [isOpen, setIsOpen] = useState(false)
@@ -53,7 +60,7 @@ export default function MasterMitraPage() {
 
   function bukaTambah() {
     setEditItem(null)
-    setForm({ ...formKosong })
+    setForm({ ...formKosong, pokja: [] })
     setIsOpen(true)
   }
 
@@ -65,6 +72,7 @@ export default function MasterMitraPage() {
       kategori: m.kategori || KOSONG,
       tingkat: m.tingkat || KOSONG,
       aktif: m.aktif,
+      pokja: mitraPokja.filter(mp => mp.mitra_id === m.id).map(mp => mp.pokja_id),
     })
     setIsOpen(true)
   }
@@ -84,8 +92,16 @@ export default function MasterMitraPage() {
         tingkat: form.tingkat === KOSONG ? '' : form.tingkat,
         aktif: form.aktif,
       }
-      if (editItem) await updateMitra(editItem.id, data)
-      else await createMitra(data)
+      // Bidang pokja disimpan setelah barisnya pasti ada: mitra baru belum
+      // punya id sampai createMitra mengembalikannya.
+      let id: number
+      if (editItem) {
+        await updateMitra(editItem.id, data)
+        id = editItem.id
+      } else {
+        id = (await createMitra(data)).id
+      }
+      await setPokjaMitra(id, form.pokja)
       toast.success(`Mitra ${editItem ? 'diperbarui' : 'ditambahkan'}.`)
       setIsOpen(false)
       reload()
@@ -180,6 +196,7 @@ export default function MasterMitraPage() {
                     <TableHead className="px-4 text-xs text-white">Singkatan</TableHead>
                     <TableHead className="px-4 text-xs text-white">Kategori</TableHead>
                     <TableHead className="px-4 text-xs text-white">Tingkat</TableHead>
+                    <TableHead className="px-4 text-xs text-white">Bidang Pokja</TableHead>
                     <TableHead className="px-4 text-center text-xs text-white">Status</TableHead>
                     <TableHead className="px-4 text-center text-xs text-white">Aksi</TableHead>
                   </TableRow>
@@ -191,6 +208,24 @@ export default function MasterMitraPage() {
                       <TableCell className="px-4 py-3 text-sm text-gray-500">{m.singkatan || '—'}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-500">{labelKategori(m.kategori)}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-500">{m.tingkat || '—'}</TableCell>
+                      <TableCell className="px-4 py-3">
+                        {(() => {
+                          const bidang = menurutInduk(
+                            daftarPokja,
+                            mitraPokja.filter(mp => mp.mitra_id === m.id).map(mp => mp.pokja_id),
+                          )
+                          if (bidang.length === 0) return <span className="text-sm text-gray-500">—</span>
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {bidang.map(pk => (
+                                <Badge key={pk.id} variant="outline" className="border-pkk-border text-xs font-normal text-pkk">
+                                  {labelBidang(pk.name)}
+                                </Badge>
+                              ))}
+                            </div>
+                          )
+                        })()}
+                      </TableCell>
                       <TableCell className="px-4 py-3 text-center">
                         {m.aktif
                           ? <Badge className="bg-status-success-tint text-status-success">Aktif</Badge>
@@ -234,7 +269,7 @@ export default function MasterMitraPage() {
                   ))}
                   {terlihat.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-10 text-center text-gray-400">
+                      <TableCell colSpan={7} className="py-10 text-center text-gray-400">
                         Tidak ada mitra yang cocok dengan penyaringan ini.
                       </TableCell>
                     </TableRow>
@@ -300,6 +335,22 @@ export default function MasterMitraPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Bidang Pokja</Label>
+              <PilihBanyak
+                opsi={daftarPokja.map(pk => ({ id: pk.id, label: pk.name }))}
+                terpilih={form.pokja}
+                onChange={pokja => setForm(p => ({ ...p, pokja }))}
+                placeholder="Pilih pokja..."
+                placeholderHabis="Semua pokja sudah dipilih"
+                pesanKosong="Daftar pokja belum terisi."
+                pesanBelumDipilih="Belum ada pokja dipilih. Boleh dikosongkan."
+              />
+              <p className="text-xs text-gray-400">
+                Catatan pokja mana yang biasa menggandeng mitra ini. Tidak membatasi apa pun —
+                saat menyusun kegiatan, semua pokja tetap melihat seluruh mitra.
+              </p>
             </div>
             <label className="flex items-start gap-2.5 rounded-lg border border-pkk-border bg-pkk-surface px-3 py-2.5">
               <Checkbox

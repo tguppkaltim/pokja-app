@@ -216,6 +216,21 @@ export interface Database {
         }
         Relationships: []
       }
+      mitra_pokja: {
+        Row: {
+          mitra_id: number
+          pokja_id: number
+        }
+        Insert: {
+          mitra_id: number
+          pokja_id: number
+        }
+        Update: {
+          mitra_id?: number
+          pokja_id?: number
+        }
+        Relationships: []
+      }
       kegiatan_mitra: {
         Row: {
           kegiatan_id: number
