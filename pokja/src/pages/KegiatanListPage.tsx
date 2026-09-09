@@ -22,6 +22,7 @@ import type { Kegiatan, JadwalKegiatan, KegiatanMitra, KegiatanWilayah, Realisas
 import { formatTanggalPendek } from '@/lib/utils'
 import { jalurPrioritas } from '@/lib/master-program'
 import { menurutInduk } from '@/lib/urutkan'
+import { labelMitra } from '@/lib/mitra'
 import { toast } from 'sonner'
 import { BadgePeringatan } from '@/components/badge-status'
 
@@ -81,7 +82,7 @@ export default function KegiatanListPage() {
         const namaMitra = menurutInduk(
           daftarMitra,
           kaitanMitra.filter(km => km.kegiatan_id === k.id).map(km => km.mitra_id),
-        ).map(m => m.singkatan || m.nama)
+        ).map(labelMitra)
         // "Belum ada realisasi" berarti belum satu pun sesi dilaporkan.
         // Kegiatan yang sudah punya satu laporan turun ke urutan biasa —
         // penandanya berarti "belum tersentuh", bukan "belum selesai".

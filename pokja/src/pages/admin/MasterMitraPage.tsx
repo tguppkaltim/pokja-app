@@ -12,16 +12,29 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useData } from '@/contexts/data-context'
 import { createMitra, updateMitra, deleteMitra } from '@/lib/db'
+import { LABEL_KATEGORI_MITRA, TINGKAT_MITRA, labelKategori } from '@/lib/mitra'
 import type { Mitra } from '@/types'
 import { toast } from 'sonner'
 
-const formKosong = { nama: '', singkatan: '', aktif: true }
+const formKosong = { nama: '', singkatan: '', kategori: '', tingkat: '', aktif: true }
+
+// Base UI butuh `items` agar trigger menampilkan label, bukan nilai mentahnya.
+const ITEM_KATEGORI = Object.entries(LABEL_KATEGORI_MITRA).map(([value, label]) => ({ value, label }))
+const ITEM_TINGKAT = TINGKAT_MITRA.map(t => ({ value: t, label: t }))
+// '—' dipakai sebagai nilai "belum ditentukan": Base UI memperlakukan string
+// kosong sebagai tidak-ada-pilihan, sehingga opsinya tidak bisa dipilih ulang.
+const KOSONG = '—'
+const ITEM_KATEGORI_FORM = [{ value: KOSONG, label: 'Belum ditentukan' }, ...ITEM_KATEGORI]
+const ITEM_TINGKAT_FORM = [{ value: KOSONG, label: 'Belum ditentukan' }, ...ITEM_TINGKAT]
+const ITEM_FILTER = [{ value: 'all', label: 'Semua kategori' }, ...ITEM_KATEGORI]
 
 export default function MasterMitraPage() {
   const { mitra, reload } = useData()
   const [cari, setCari] = useState('')
+  const [filterKategori, setFilterKategori] = useState('all')
   const [isOpen, setIsOpen] = useState(false)
   const [editItem, setEditItem] = useState<Mitra | null>(null)
   const [form, setForm] = useState({ ...formKosong })
@@ -29,11 +42,12 @@ export default function MasterMitraPage() {
 
   const terlihat = useMemo(() => {
     const q = cari.trim().toLowerCase()
-    if (!q) return mitra
-    return mitra.filter(m =>
-      m.nama.toLowerCase().includes(q) || m.singkatan.toLowerCase().includes(q),
-    )
-  }, [mitra, cari])
+    return mitra.filter(m => {
+      if (filterKategori !== 'all' && m.kategori !== filterKategori) return false
+      if (!q) return true
+      return m.nama.toLowerCase().includes(q) || m.singkatan.toLowerCase().includes(q)
+    })
+  }, [mitra, cari, filterKategori])
 
   const jumlahAktif = mitra.filter(m => m.aktif).length
 
@@ -45,7 +59,13 @@ export default function MasterMitraPage() {
 
   function bukaUbah(m: Mitra) {
     setEditItem(m)
-    setForm({ nama: m.nama, singkatan: m.singkatan, aktif: m.aktif })
+    setForm({
+      nama: m.nama,
+      singkatan: m.singkatan,
+      kategori: m.kategori || KOSONG,
+      tingkat: m.tingkat || KOSONG,
+      aktif: m.aktif,
+    })
     setIsOpen(true)
   }
 
@@ -56,7 +76,14 @@ export default function MasterMitraPage() {
     }
     setIsSaving(true)
     try {
-      const data = { nama: form.nama.trim(), singkatan: form.singkatan.trim(), aktif: form.aktif }
+      const data = {
+        nama: form.nama.trim(),
+        singkatan: form.singkatan.trim(),
+        // KOSONG hanya penanda di antarmuka; yang disimpan tetap string kosong.
+        kategori: form.kategori === KOSONG ? '' : form.kategori,
+        tingkat: form.tingkat === KOSONG ? '' : form.tingkat,
+        aktif: form.aktif,
+      }
       if (editItem) await updateMitra(editItem.id, data)
       else await createMitra(data)
       toast.success(`Mitra ${editItem ? 'diperbarui' : 'ditambahkan'}.`)
@@ -103,28 +130,38 @@ export default function MasterMitraPage() {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <Input
-          value={cari}
-          onChange={e => setCari(e.target.value)}
-          placeholder="Cari nama atau singkatan..."
-          className="border-pkk-border pl-9"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            value={cari}
+            onChange={e => setCari(e.target.value)}
+            placeholder="Cari nama atau singkatan..."
+            className="border-pkk-border pl-9"
+          />
+        </div>
+        <Select items={ITEM_FILTER} value={filterKategori} onValueChange={v => v && setFilterKategori(v)}>
+          <SelectTrigger className="border-pkk-border sm:w-64"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {ITEM_FILTER.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       <Card className="border-pkk-border">
         <CardContent className="p-0">
           {mitra.length === 0 ? (
-            // Daftar sengaja dibiarkan kosong oleh migrasi: nama OPD tidak
-            // boleh dikarang. Halaman kosong tanpa penjelasan terbaca seperti
+            // Sejak migrasi 020 daftar ini terisi 102 mitra dari Rencana Program
+            // TP PKK Kaltim, jadi keadaan kosong berarti migrasinya belum
+            // dijalankan. Halaman kosong tanpa penjelasan terbaca seperti
             // kerusakan, jadi keadaannya dinyatakan.
             <div className="px-6 py-16 text-center">
               <Building2 className="mx-auto h-10 w-10 text-pkk-soft" />
               <p className="mt-3 font-medium text-gray-700">Daftar mitra masih kosong</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
-                Tambahkan OPD dan mitra yang bekerja sama dengan TP PKK. Setelah terisi,
-                daftar ini muncul sebagai pilihan saat menyusun Rencana Kegiatan.
+                Daftar resmi mitra TP PKK Kaltim biasanya sudah terisi dari awal. Kalau
+                halaman ini kosong, migrasi 020 belum dijalankan — tambahkan manual di
+                bawah ini bila memang perlu.
               </p>
               <Button onClick={bukaTambah} className="mt-4 bg-pkk transisi-warna hover:bg-pkk-hover">
                 <Plus className="mr-1 h-4 w-4" /> Tambah Mitra Pertama
@@ -141,6 +178,8 @@ export default function MasterMitraPage() {
                   <TableRow className="border-pkk-tint bg-pkk hover:bg-pkk">
                     <TableHead className="px-4 text-xs text-white">Nama Mitra / OPD</TableHead>
                     <TableHead className="px-4 text-xs text-white">Singkatan</TableHead>
+                    <TableHead className="px-4 text-xs text-white">Kategori</TableHead>
+                    <TableHead className="px-4 text-xs text-white">Tingkat</TableHead>
                     <TableHead className="px-4 text-center text-xs text-white">Status</TableHead>
                     <TableHead className="px-4 text-center text-xs text-white">Aksi</TableHead>
                   </TableRow>
@@ -150,6 +189,8 @@ export default function MasterMitraPage() {
                     <TableRow key={m.id} className="border-pkk-tint">
                       <TableCell className="px-4 py-3 font-medium text-gray-800">{m.nama}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-500">{m.singkatan || '—'}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-500">{labelKategori(m.kategori)}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-500">{m.tingkat || '—'}</TableCell>
                       <TableCell className="px-4 py-3 text-center">
                         {m.aktif
                           ? <Badge className="bg-status-success-tint text-status-success">Aktif</Badge>
@@ -193,8 +234,8 @@ export default function MasterMitraPage() {
                   ))}
                   {terlihat.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="py-10 text-center text-gray-400">
-                        Tidak ada mitra yang cocok dengan "{cari}".
+                      <TableCell colSpan={6} className="py-10 text-center text-gray-400">
+                        Tidak ada mitra yang cocok dengan penyaringan ini.
                       </TableCell>
                     </TableRow>
                   )}
@@ -231,6 +272,34 @@ export default function MasterMitraPage() {
               <p className="text-xs text-gray-400">
                 Dipakai di tabel yang sempit. Nama panjangnya tetap tersimpan utuh untuk laporan.
               </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Kategori</Label>
+                <Select
+                  items={ITEM_KATEGORI_FORM}
+                  value={form.kategori || KOSONG}
+                  onValueChange={v => v && setForm(p => ({ ...p, kategori: v }))}
+                >
+                  <SelectTrigger className="border-pkk-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ITEM_KATEGORI_FORM.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tingkat</Label>
+                <Select
+                  items={ITEM_TINGKAT_FORM}
+                  value={form.tingkat || KOSONG}
+                  onValueChange={v => v && setForm(p => ({ ...p, tingkat: v }))}
+                >
+                  <SelectTrigger className="border-pkk-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ITEM_TINGKAT_FORM.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <label className="flex items-start gap-2.5 rounded-lg border border-pkk-border bg-pkk-surface px-3 py-2.5">
               <Checkbox

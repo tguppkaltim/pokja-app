@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type { Rapat, TindakLanjut, ProgresTindakLanjut, JadwalKegiatan, Kegiatan, KegiatanMitra, KegiatanWilayah, Mitra, Wilayah, Pokja, ProgramPokok, ProgramUnggulan, ProgramPrioritas, RealisasiKegiatan, EvidenceFile, User } from '@/types'
 import { formatTanggalPanjang } from '@/lib/utils'
 import { bandingkanPokok } from '@/lib/master-program'
+import { labelMitra } from '@/lib/mitra'
 
 // ─── Pokja ───────────────────────────────────────────────────────────────────
 
@@ -120,12 +121,19 @@ export async function deleteProgramPrioritas(id: number): Promise<void> {
 
 // ─── Mitra / OPD ─────────────────────────────────────────────────────────────
 
-type MitraBaru = Pick<Mitra, 'nama'> & Partial<Pick<Mitra, 'singkatan' | 'aktif'>>
+type MitraBaru = Pick<Mitra, 'nama'> &
+  Partial<Pick<Mitra, 'singkatan' | 'kategori' | 'tingkat' | 'aktif'>>
 
 export async function fetchMitra(): Promise<Mitra[]> {
-  const { data, error } = await supabase.from('mitra').select('*').order('nama')
+  const { data, error } = await supabase.from('mitra').select('*')
   if (error) throw error
-  return data ?? []
+  // Diurutkan menurut nama yang benar-benar TAMPIL, bukan menurut kolom nama.
+  // Mengurutkan di basis data akan menaruh "Baznas Kaltim" di bawah B padahal
+  // yang terbaca "Badan Amil Zakat Nasional..." — daftar 100-an mitra jadi
+  // terasa acak. PostgREST tidak bisa mengurutkan berdasarkan ekspresi, dan
+  // untuk sebanyak ini mengurutkannya di sini tidak terasa.
+  return (data ?? []).sort((a, b) =>
+    labelMitra(a).localeCompare(labelMitra(b), 'id'))
 }
 
 export async function createMitra(data: MitraBaru): Promise<Mitra> {

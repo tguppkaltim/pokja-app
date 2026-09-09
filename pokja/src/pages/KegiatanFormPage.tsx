@@ -18,6 +18,7 @@ import { fetchKegiatanById, createKegiatan, updateKegiatan, fetchJadwal, setJadw
 import { toTanggalLokal, formatTanggalPanjang } from '@/lib/utils'
 import { prioritasPerPokja } from '@/lib/master-program'
 import { PilihBanyak } from '@/components/pilih-banyak'
+import { labelMitra } from '@/lib/mitra'
 import { toast } from 'sonner'
 
 
@@ -325,7 +326,7 @@ export default function KegiatanFormPage() {
             <div className="space-y-1.5">
               <Label>Mitra / OPD</Label>
               <PilihBanyak
-                opsi={daftarMitra.map(m => ({ id: m.id, label: m.nama, nonaktif: !m.aktif }))}
+                opsi={daftarMitra.map(m => ({ id: m.id, label: labelMitra(m), nonaktif: !m.aktif }))}
                 terpilih={form.mitra}
                 onChange={mitra => setForm(prev => ({ ...prev, mitra }))}
                 placeholder="Pilih mitra/OPD..."

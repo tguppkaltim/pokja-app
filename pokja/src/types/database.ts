@@ -188,6 +188,9 @@ export interface Database {
           id: number
           nama: string
           singkatan: string
+          kode: string
+          kategori: string
+          tingkat: string
           aktif: boolean
           created_at: string
         }
@@ -195,6 +198,9 @@ export interface Database {
           id?: number
           nama: string
           singkatan?: string
+          kode?: string
+          kategori?: string
+          tingkat?: string
           aktif?: boolean
           created_at?: string
         }
@@ -202,6 +208,9 @@ export interface Database {
           id?: number
           nama?: string
           singkatan?: string
+          kode?: string
+          kategori?: string
+          tingkat?: string
           aktif?: boolean
           created_at?: string
         }

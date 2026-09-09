@@ -60,6 +60,12 @@ export interface Mitra {
   nama: string
   /** Dipakai di tabel yang sempit; kosong berarti pakai nama panjangnya. */
   singkatan: string
+  /** Penanda tetap dari berkas sumber; kosong untuk mitra yang ditambah manual. */
+  kode: string
+  /** Golongan lembaga, mis. 'OPD_PROVINSI'. Kosong = belum ditentukan. */
+  kategori: string
+  /** Cakupan wilayah kerja, mis. 'Provinsi'. Kosong = belum ditentukan. */
+  tingkat: string
   /** False = tidak muncul lagi sebagai pilihan, tapi kaitan lama tetap utuh. */
   aktif: boolean
   created_at: string
